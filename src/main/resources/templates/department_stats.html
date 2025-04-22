@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部门工作统计 - 部门管理系统</title>
+    <th:block th:replace="~{fragments/scripts :: commonScripts}"></th:block>
+    <!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">-->
+    <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
+    <link rel="stylesheet" th:href="@{/css/department_stats.css}">
+    <link rel="stylesheet" th:href="@{/css/workdays.css}">
+</head>
+<body class="bg-gray-100 font-sans min-h-screen">
+
+<header th:replace="~{fragments/header :: navbar}"></header>
+
+<div class="flex">
+    <aside id="stats-sidebar"
+           class="w-56 bg-gray-800 text-gray-300 min-h-screen p-4 fixed top-16 left-0 h-full overflow-y-auto shadow-lg hidden md:block">
+        <nav>
+            <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2 mt-2">统计视图</h3>
+            <ul>
+                <li>
+                    <a href="#" data-view="data_visualization"
+                       class="stats-sidebar-link flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white  active-view">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                        </svg>
+                        数据可视化
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-view="department_report"
+                       class="stats-sidebar-link flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 17v-2a4 4 0 00-4-4H3V9a4 4 0 004-4h2a4 4 0 004 4v2m1 5l2 2m0 0l2-2m-2 2v-4m6 4h-3a2 2 0 00-2 2v2a2 2 0 002 2h3a2 2 0 002-2v-2a2 2 0 00-2-2z"></path>
+                        </svg>
+                        部门周报统计
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-view="employee_detail"
+                       class="stats-sidebar-link flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M12 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        员工工时明细
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="flex-1 md:ml-56 mt-16 p-6 mb-4">
+        <div id="common-stats-info" class="mb-6 p-4 bg-white rounded-lg shadow">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-700">
+                    <span>一级部门负责人: <strong id="common-head-name"
+                                                  class="text-indigo-700">加载中...</strong></span>
+                    <span>部门总人数: <strong id="common-emp-count" class="text-indigo-700">...</strong></span>
+                    <span>当前周数: <strong id="common-week-num" class="text-indigo-700">...</strong></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label for="stats-start-date" class="text-sm font-medium text-gray-700">开始日期:</label>
+                        <input type="text" id="stats-start-date" name="startDate" class="input-field w-32 text-sm py-1">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="stats-end-date" class="text-sm font-medium text-gray-700">结束日期:</label>
+                        <input type="text" id="stats-end-date" name="endDate" class="input-field w-32 text-sm py-1">
+                    </div>
+                    <button id="refresh-stats-button" type="button" class="btn btn-secondary btn-sm">查询</button>
+                    <button id="export-screenshot-button" type="button" class="btn btn-success btn-sm">
+                        <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        导出截图
+                    </button>
+                </div>
+            </div>
+            <div id="common-stats-error" class="text-red-500 text-xs mt-2"></div>
+        </div>
+
+        <div id="stats-view-container">
+
+            <div id="data-visualization-view" class="stats-view space-y-6">
+                <div class="bg-white p-4 rounded-lg shadow  overflow-hidden">
+                    <h2 class="text-lg font-semibold mb-3 border-b pb-2 text-gray-700">各部门在利润中心投入人天分布</h2>
+                    <div class="chart-container relative h-96"> <div class="text-center py-5 chart-loader"><div class="loader"></div> 加载图表数据...</div>
+                        <canvas id="profitCenterChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-3 border-b pb-2 text-gray-700">月度项目数量趋势</h2>
+                    <div class="chart-container relative h-72"> <div class="text-center py-5 chart-loader"><div class="loader"></div> 加载图表数据...</div>
+                        <canvas id="monthlyProjectChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="department-report-view" class="stats-view hidden space-y-6">
+                <div id="dept-overview-table-container" class="bg-white shadow-md rounded-lg">
+                    <h2 class="text-lg font-semibold p-4 border-b bg-gray-50">部门整体情况统计</h2>
+                    <div class="overflow-x-auto p-4">
+                        <div class="text-center py-5 table-loader">
+                            <div class="loader"></div>
+                            加载中...
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200 hidden data-table">
+                            <thead class="bg-gray-100">
+                            <tr>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 text-center">序号</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">部门名称</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">层级</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">负责人</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 text-center">人数</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">部门成员</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right">总工时(人天)</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right">非项目工时(人天)</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right">项目工时(人天)</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right">项目工时率(%)</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot class="bg-gray-100 font-semibold"></tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div id="key-projects-table-container" class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <h2 class="text-lg font-semibold p-4 border-b bg-gray-50">二级部门重点工作统计 (工时 &gt;
+                        30人天)</h2>
+                    <div class="overflow-x-auto p-4">
+                        <div class="text-center py-5 table-loader">
+                            <div class="loader"></div>
+                            加载中...
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200 hidden data-table">
+                            <thead class="bg-gray-100"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="pc-pivot-table-container" class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <h2 class="text-lg font-semibold p-4 border-b bg-gray-50">二级部门按利润中心统计</h2>
+                    <div class="overflow-x-auto p-4">
+                        <div class="text-center py-5 table-loader">
+                            <div class="loader"></div>
+                            加载中...
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200 hidden data-table table-fixed">
+                            <thead class="bg-gray-100"></thead>
+                            <tbody></tbody>
+                            <tfoot class="bg-gray-100 font-bold"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="employee-detail-view" class="stats-view hidden">
+                <div id="employee-details-table-container" class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <h2 class="text-lg font-semibold p-4 border-b bg-gray-50">员工工时明细</h2>
+                    <div class="overflow-x-auto p-4">
+                        <div class="text-center py-5 table-loader">
+                            <div class="loader"></div>
+                            加载中...
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200 hidden data-table">
+                            <thead class="bg-gray-100"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!--公用JS由 `fragments/scripts.html` 统一管理。本页面只保留对页面专属逻辑文件 `department_stats.js` -->
+<script th:src="@{/js/department_stats.js}"></script>
+
+<!--<script src="https://npmcdn.com/flatpickr/dist/flatpickr.min.js"></script>-->
+<!--<script src="https://npmcdn.com/flatpickr/dist/l10n/zh.js"></script>-->
+
+
+
+
+</body>
+</html>
+
+<!--* **修改说明:**-->
+<!--* 添加了页面标题、公共脚本、页面专属 CSS (`department_stats.css`) 和日期选择器 CSS 的引入。-->
+<!--* 创建了一个新的侧边栏结构 (`#stats-sidebar`)，包含两个视图切换链接 (`data-view="department_report"` 和 `data-view="employee_detail"`)。-->
+<!--* 创建了主内容区 (`<main>`)。-->
+<!--    * 添加了公共信息区 (`#common-stats-info`)，包含用于显示负责人、总人数、周数的 `<strong>` 标签（带 ID），以及两个用于日期选择的 `<input type="text">`（配合 Flatpickr 使用）和一个“导出截图”按钮。-->
+<!--        * 添加了视图容器 (`#stats-view-container`)。-->
+<!--        * 在视图容器内，为两个视图（部门周报、员工明细）分别创建了 `div`（`#department-report-view`, `#employee-detail-view`），并默认隐藏了员工明细视图。-->
+<!--        * 在部门周报视图内，为三个表格分别创建了容器 `div`，并包含了标题、加载提示和空的 `<table>` 结构（包含 `<thead>`, `<tbody>`, `<tfoot>`）。-->
+<!--        * 在员工明细视图内，为员工表格创建了容器 `div` 和空的 `<table>` 结构。-->
+<!--            * 在 `<body>` 底部引入了 `html2canvas`、`flatpickr`（需要您自行下载放置）和新的 `department_stats.js`。-->
+<!--            * 添加了一些基本的进度条和隐藏元素的 CSS 样式（内联或移至 CSS 文-->

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部门管理系统 - 首页</title>
+    <th:block th:replace="~{fragments/scripts :: commonScripts}"></th:block>
+</head>
+<body class="bg-gray-100 font-sans">
+
+<header th:replace="~{fragments/header :: navbar}"></header>
+
+<main class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">欢迎使用部门管理系统</h1>
+    <p class="text-gray-600 mb-6">
+        这是一个用于管理部门工时、员工、项目和业务的集成系统。
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h2 class="text-xl font-semibold text-blue-800 mb-2">系统信息</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>当前时间: <span th:text="${currentTime}" class="font-mono">加载中...</span></li>
+                <li>您的 IP 地址: <span th:text="${clientIp}" class="font-mono">未知</span></li>
+            </ul>
+        </div>
+
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h2 class="text-xl font-semibold text-green-800 mb-2">快速导航</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li><a th:href="@{/department-stats}" class="text-indigo-600 hover:underline">查看部门周报</a></li>
+                <li><a th:href="@{/timesheets/statistics}" class="text-indigo-600 hover:underline">查看工时统计</a></li>
+                <li><a th:href="@{/datamaintenance}" class="text-indigo-600 hover:underline">进入数据维护</a></li>
+            </ul>
+        </div>
+    </div>
+</main>
+
+<footer class="text-center text-gray-500 mt-10 pb-4">
+    <p th:text="${copyright}">版权信息加载中...</p>
+</footer>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* 基本的 HTML5 结构。-->
+<!--* 使用 `th:replace` 引入了 `scripts.html` (在 `<head>`) 和 `header.html` (在 `<body>`) 片段。-->
+<!--* 使用 `th:text` 显示从 `PageController` 传递过来的 `currentTime`, `clientIp`, 和 `copyright` 变量。-->
+<!--* 使用了 Tailwind CSS 类进行布局（`container`, `grid`）和样式（背景、边框、颜色、字体、阴影-->

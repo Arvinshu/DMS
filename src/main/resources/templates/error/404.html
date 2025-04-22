@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误 - 页面未找到</title>
+    <th:block th:replace="~{fragments/scripts :: commonScripts}"></th:block>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+    <h1 class="text-6xl font-bold text-blue-500 mb-4">404</h1>
+    <h2 class="text-2xl font-semibold text-gray-800 mb-2" th:text="${error ?: '页面未找到'}">页面未找到</h2>
+    <p class="text-gray-600 mb-6" th:text="${message ?: '抱歉，您访问的页面不存在或已被移动。'}">抱歉，您访问的页面不存在或已被移动。</p>
+
+    <div th:if="${status != null or path != null or timestamp != null}" class="text-left text-sm text-gray-500 bg-gray-50 p-4 rounded border border-gray-200 mb-6">
+        <p th:if="${status}"><strong class="font-medium">状态码:</strong> <span th:text="${status}"></span></p>
+        <p th:if="${path}"><strong class="font-medium">请求路径:</strong> <span th:text="${path}" class="break-all"></span></p>
+        <p th:if="${timestamp}"><strong class="font-medium">时间戳:</strong> <span th:text="${#dates.format(timestamp, 'yyyy-MM-dd HH:mm:ss')}"></span></p>
+    </div>
+
+    <a th:href="@{/}" class="inline-block px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition duration-150 ease-in-out">
+        返回首页
+    </a>
+</div>
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* 类似 400 页面，但显示 404 状态码和 "页面未找到" 的信息。-->
+<!--* 不包含 `errors` 部分，因为 404 通常没有具体的字段验证-->

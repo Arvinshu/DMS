@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.DepartmentMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.Department">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="dep_name" property="depName" jdbcType="VARCHAR"/>
+        <result column="dep_level" property="depLevel" jdbcType="VARCHAR"/>
+        <result column="manager_id" property="managerId" jdbcType="VARCHAR"/>
+        <result column="assistant_manager_id" property="assistantManagerId" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="active" property="active" jdbcType="BOOLEAN"/>
+        <result column="is_statistics" property="statistics" jdbcType="BOOLEAN"/>
+    </resultMap>
+
+    <resultMap id="ResultMapWithNames" type="org.ls.entity.Department" extends="BaseResultMap">
+        <result column="manager_name" property="managerName" jdbcType="VARCHAR"/>
+        <result column="assistant_manager_name" property="assistantManagerName" jdbcType="VARCHAR"/>
+    </resultMap>
+
+
+    <sql id="Base_Column_List">
+        d.id, d.dep_name, d.dep_level, d.manager_id, d.assistant_manager_id,
+        d.created_at, d.updated_at, d.active, d.is_statistics
+    </sql>
+
+    <sql id="Columns_With_Names">
+        <include refid="Base_Column_List" />,
+        emp_m.employee_name AS manager_name,
+        emp_a.employee_name AS assistant_manager_name
+    </sql>
+
+    <sql id="Where_Clause">
+        <where>
+            <if test="id != null">
+                AND d.id = #{id,jdbcType=INTEGER}
+            </if>
+            <if test="depName != null and depName != ''">
+                AND d.dep_name LIKE CONCAT('%', #{depName}, '%')
+            </if>
+            <if test="depLevel != null and depLevel != ''">
+                AND d.dep_level = #{depLevel,jdbcType=VARCHAR}
+            </if>
+            <if test="managerId != null and managerId != ''">
+                AND d.manager_id = #{managerId,jdbcType=VARCHAR}
+            </if>
+            <if test="assistantManagerId != null and assistantManagerId != ''">
+                AND d.assistant_manager_id = #{assistantManagerId,jdbcType=VARCHAR}
+            </if>
+            <if test="active != null and active != ''">
+                AND d.active = (#{active}::boolean)
+            </if>
+            <if test="statistics != null and statistics != ''">
+                AND d.is_statistics = (#{statistics}::boolean)
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultMap="ResultMapWithNames" parameterType="int">
+        SELECT <include refid="Columns_With_Names" />
+        FROM public.t_department d
+        LEFT JOIN public.t_employee emp_m ON d.manager_id = emp_m.employee
+        LEFT JOIN public.t_employee emp_a ON d.assistant_manager_id = emp_a.employee
+        WHERE d.id = #{id,jdbcType=INTEGER}
+    </select>
+
+    <select id="findByName" resultMap="ResultMapWithNames" parameterType="string">
+        SELECT <include refid="Columns_With_Names" />
+        FROM public.t_department d
+        LEFT JOIN public.t_employee emp_m ON d.manager_id = emp_m.employee
+        LEFT JOIN public.t_employee emp_a ON d.assistant_manager_id = emp_a.employee
+        WHERE d.dep_name = #{depName,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findMaxId" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(id), 0) FROM public.t_department
+    </select>
+
+    <select id="findIdByName" resultType="java.lang.Integer" parameterType="string">
+        SELECT id
+        FROM public.t_department
+        WHERE dep_name = #{depName,jdbcType=VARCHAR}
+        LIMIT 1
+    </select>
+
+
+<!--    <select id="findPrimaryDepartmentHead" resultType="map">-->
+<!--        SELECT-->
+<!--            d.id AS departmentId,-->
+<!--            d.dep_name AS departmentName,-->
+<!--            emp.employee_name AS managerName-->
+<!--        FROM-->
+<!--            public.t_department d-->
+<!--                LEFT JOIN-->
+<!--            public.t_employee emp ON d.manager_id = emp.employee-->
+<!--        WHERE-->
+<!--            d.dep_level = '一级部门'-->
+<!--        LIMIT 1 &#45;&#45; 假设只有一个一级部门，或者取第一个-->
+<!--    </select>-->
+    <select id="findPrimaryDepartmentHead" resultType="map">
+        SELECT
+            d.id AS departmentId,
+            d.dep_name AS departmentName,
+            emp.employee_name AS managerName FROM
+            public.t_department d
+                LEFT JOIN
+            public.t_employee emp ON d.manager_id = emp.employee
+        WHERE
+            d.dep_level = '一级部门'
+        LIMIT 1 </select>
+
+    <select id="findActiveStatsDepartmentsSorted" resultMap="BaseResultMap">
+        SELECT
+            id, dep_name, dep_level, manager_id, assistant_manager_id, created_at, updated_at, active, is_statistics
+        FROM
+            public.t_department
+        WHERE
+            active = true AND is_statistics = true
+        ORDER BY
+            id ASC
+    </select>
+
+
+    <select id="findAll" resultMap="ResultMapWithNames" parameterType="map">
+        SELECT <include refid="Columns_With_Names" />
+        FROM public.t_department d
+        LEFT JOIN public.t_employee emp_m ON d.manager_id = emp_m.employee
+        LEFT JOIN public.t_employee emp_a ON d.assistant_manager_id = emp_a.employee
+        <include refid="Where_Clause" />
+        ORDER BY d.id ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(d.*)
+        FROM public.t_department d
+        <include refid="Where_Clause" />
+    </select>
+
+    <insert id="insert" parameterType="org.ls.entity.Department">
+        INSERT INTO public.t_department
+        (id, dep_name, dep_level, manager_id, assistant_manager_id, created_at, updated_at, active, is_statistics)
+        VALUES (#{id,jdbcType=INTEGER}, #{depName,jdbcType=VARCHAR}, #{depLevel,jdbcType=VARCHAR},
+                #{managerId,jdbcType=VARCHAR}, #{assistantManagerId,jdbcType=VARCHAR},
+                CURRENT_TIMESTAMP, NULL, #{active,jdbcType=BOOLEAN}, #{statistics,jdbcType=BOOLEAN})
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.Department">
+        UPDATE public.t_department
+        <set>
+            <if test="depName != null and depName != ''">
+                dep_name = #{depName,jdbcType=VARCHAR},
+            </if>
+            <if test="depLevel != null">
+                dep_level = #{depLevel,jdbcType=VARCHAR},
+            </if>
+            <if test="managerId == null or managerId != null">
+                manager_id = #{managerId,jdbcType=VARCHAR},
+            </if>
+            <if test="assistantManagerId == null or assistantManagerId != null">
+                assistant_manager_id = #{assistantManagerId,jdbcType=VARCHAR},
+            </if>
+            <if test="active != null">
+                active = #{active,jdbcType=BOOLEAN},
+            </if>
+            <if test="statistics != null">
+                is_statistics = #{statistics,jdbcType=BOOLEAN},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM public.t_department WHERE id = #{id,jdbcType=INTEGER}
+    </delete>
+
+</mapper>

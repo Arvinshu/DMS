@@ -1,0 +1,76 @@
+/**
+ * 附件解密同步功能区专属样式
+ * 文件路径: src/main/resources/static/css/sync_data.css
+ * 主要包含进度条等 Tailwind 不易直接处理的样式。
+ */
+
+/* 进度条容器样式 */
+.progress-bar {
+    background-color: #e5e7eb; /* Tailwind gray-200 */
+    border-radius: 0.25rem; /* rounded */
+    overflow: hidden;
+    height: 0.5rem; /* h-2 */
+    margin-top: 0.5rem; /* mt-2 */
+    width: 100%; /* 默认宽度 */
+}
+
+/* 进度条内部填充条样式 */
+.progress-bar-inner {
+    background-color: #3b82f6; /* Tailwind blue-500 */
+    height: 100%;
+    width: 0%; /* 初始宽度为 0, 由 JS 更新 */
+    transition: width 0.3s ease-in-out; /* 平滑过渡效果 */
+    border-radius: 0.25rem; /* rounded */
+    /* 可以添加动画效果，例如条纹 */
+    /* background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent); */
+    /* background-size: 1rem 1rem; */
+    /* animation: progress-bar-stripes 1s linear infinite; */
+}
+
+/* 进度条条纹动画 (可选) */
+/*
+@keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
+*/
+
+/* 同步按钮在处理中时的样式 (可选，也可以通过 JS 直接修改文本和添加 loading 图标) */
+.sync-button:disabled {
+    /* background-color: #9ca3af; */ /* Tailwind gray-400 */
+    /* cursor: not-allowed; */
+    /* opacity: 0.7; */
+    /* Tailwind 的 disabled:opacity-XX 通常已足够 */
+}
+
+/* 临时文件列表项的样式 (可选，如果需要特殊效果) */
+/*
+#temp-file-list li {
+    transition: background-color 0.2s ease;
+}
+#temp-file-list li:hover {
+    background-color: #f9fafb; /* Tailwind gray-50 */
+/* }
+*/
+
+
+/*```*/
+/** **注释:***/
+/** 定义了 `.progress-bar` (进度条轨道) 和 `.progress-bar-inner` (进度条填充部分) 的基本样式，包括背景色、圆角、高度和过渡效果。*/
+/*                                                                                * 提供了可选的条纹动画 `@keyframes progress-bar-stripes`（默认注释掉）。*/
+/*                                                                                                                                        * 对同步按钮的禁用状态样式进行了说明（通常 Tailwind 的 `disabled:` 前缀已足够）。*/
+/*                                                                                                                                        * 对临时文件列表项的悬停效果进行了说明（可选）。*/
+
+/*                                                                                                                                        **下一步开发建议:***/
+
+/*                                                                                                                                        您现在已经拥有了附件解密同步功能区所需的 CSS 文件。请确保在 `project.html` 的 `<head>` 中正确引入了这个 CSS 文件：*/
+
+/*```html*/
+/*<link rel="stylesheet" th:href="@{/css/sync_data.css}">*/
+/*                                                      ```*/
+
+/*接下来的主要工作仍然是**后端 API 的实现**和**前端 JS 逻辑的完善与联调**，特别是：*/
+
+/*1.  **后端:** 实现 `TaskApiController`, `AttachmentController` (包括 SFTP/文件操作), `ProjectService` (自动计算) 的完整逻辑。*/
+/*2.  **前端:** 完善 `project_crud.js`, `project_tasks.js`, `project_attachments.js`, `attachment_sync.js` 中的 TODO 部分和与后端 API 的对接。*/
+/*3.  **测试:** 进行全面的前后端联调*/

@@ -1,0 +1,44 @@
+/**
+ * 部门工作统计页面专属样式表
+ * 文件路径: src/main/resources/static/css/department_stats.css
+ * 包含该页面特有的、非 Tailwind 原子类直接提供的样式。
+ */
+
+/* 加载动画样式 */
+.loader {
+    border: 4px solid #f3f3f3; /* 浅灰色轨道 */
+    border-top: 4px solid #3b82f6; /* 蓝色旋转部分 (Tailwind blue-500) */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* 定义 'spin' 动画的关键帧 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 激活的侧边栏菜单项 */
+/* 注意：确保 Tailwind 类如 bg-gray-900 text-white 优先应用， */
+/* 或者移除 JS 中的 active-view 类添加，完全依赖 Thymeleaf 的 th:classappend */
+/* 如果需要 CSS 控制，可以这样写，但需注意优先级 */
+/*
+.stats-sidebar-link.active-view {
+    background-color: #374151; /* gray-700 */
+/* color: white; */
+/* }
+*/
+
+/* 表格内强制换行 */
+.wrap-cell {
+    white-space: normal !important; /* 强制普通换行 */
+    word-break: break-all;      /* 允许在单词内换行 */
+}
+
+/* 可以添加其他特定于此页面的样式 */
+

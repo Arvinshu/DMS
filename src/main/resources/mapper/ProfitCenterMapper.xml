@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.ProfitCenterMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.ProfitCenter">
+        <id column="zone" property="zone" jdbcType="VARCHAR"/>
+        <result column="business_type" property="businessType" jdbcType="VARCHAR"/>
+        <result column="region_category" property="regionCategory" jdbcType="VARCHAR"/>
+        <result column="region_name" property="regionName" jdbcType="VARCHAR"/>
+        <result column="center_name" property="centerName" jdbcType="VARCHAR"/>
+        <result column="business_subcategory" property="businessSubcategory" jdbcType="VARCHAR"/>
+        <result column="department_name" property="departmentName" jdbcType="VARCHAR"/>
+        <result column="responsible_person" property="responsiblePerson" jdbcType="VARCHAR"/>
+        <result column="work_location" property="workLocation" jdbcType="VARCHAR"/>
+        <result column="custom_zone_remark" property="customZoneRemark" jdbcType="VARCHAR"/>
+        <result column="is_enabled" property="enabled" jdbcType="BOOLEAN"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        zone, business_type, region_category, region_name, center_name, business_subcategory,
+        department_name, responsible_person, work_location, custom_zone_remark, is_enabled,
+        created_at, updated_at
+    </sql>
+
+    <sql id="Where_Clause">
+        <where>
+            <if test="zone != null and zone != ''">
+                AND zone LIKE CONCAT('%', #{zone}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND business_type LIKE CONCAT('%', #{businessType}, '%')
+            </if>
+            <if test="regionCategory != null and regionCategory != ''">
+                AND region_category LIKE CONCAT('%', #{regionCategory}, '%')
+            </if>
+            <if test="regionName != null and regionName != ''">
+                AND region_name LIKE CONCAT('%', #{regionName}, '%')
+            </if>
+            <if test="centerName != null and centerName != ''">
+                AND center_name LIKE CONCAT('%', #{centerName}, '%')
+            </if>
+            <if test="businessSubcategory != null and businessSubcategory != ''">
+                AND business_subcategory LIKE CONCAT('%', #{businessSubcategory}, '%')
+            </if>
+            <if test="departmentName != null and departmentName != ''">
+                AND department_name LIKE CONCAT('%', #{departmentName}, '%')
+            </if>
+            <if test="responsiblePerson != null and responsiblePerson != ''">
+                AND responsible_person LIKE CONCAT('%', #{responsiblePerson}, '%')
+            </if>
+            <if test="workLocation != null and workLocation != ''">
+                AND work_location LIKE CONCAT('%', #{workLocation}, '%')
+            </if>
+            <if test="customZoneRemark != null and customZoneRemark != ''">
+                AND custom_zone_remark LIKE CONCAT('%', #{customZoneRemark}, '%')
+            </if>
+            <if test="enabled != null and enabled != ''">
+                AND is_enabled = (#{enabled}::boolean)
+            </if>
+        </where>
+    </sql>
+
+    <select id="findByZone" resultMap="BaseResultMap" parameterType="string">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_profit_center
+        WHERE zone = #{zone,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap" parameterType="map">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_profit_center
+        <include refid="Where_Clause" />
+        ORDER BY zone ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(*)
+        FROM public.t_profit_center
+        <include refid="Where_Clause" />
+    </select>
+
+    <insert id="insert" parameterType="org.ls.entity.ProfitCenter">
+        INSERT INTO public.t_profit_center
+        (zone, business_type, region_category, region_name, center_name, business_subcategory, department_name,
+         responsible_person, work_location, custom_zone_remark, is_enabled, created_at, updated_at)
+        VALUES (#{zone,jdbcType=VARCHAR}, #{businessType,jdbcType=VARCHAR}, #{regionCategory,jdbcType=VARCHAR},
+                #{regionName,jdbcType=VARCHAR}, #{centerName,jdbcType=VARCHAR}, #{businessSubcategory,jdbcType=VARCHAR},
+                #{departmentName,jdbcType=VARCHAR}, #{responsiblePerson,jdbcType=VARCHAR}, #{workLocation,jdbcType=VARCHAR},
+                #{customZoneRemark,jdbcType=VARCHAR}, #{enabled,jdbcType=BOOLEAN}, CURRENT_TIMESTAMP, NULL)
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.ProfitCenter">
+        UPDATE public.t_profit_center
+        <set>
+            <if test="businessType != null">
+                business_type = #{businessType,jdbcType=VARCHAR},
+            </if>
+            <if test="regionCategory != null">
+                region_category = #{regionCategory,jdbcType=VARCHAR},
+            </if>
+            <if test="regionName != null">
+                region_name = #{regionName,jdbcType=VARCHAR},
+            </if>
+            <if test="centerName != null">
+                center_name = #{centerName,jdbcType=VARCHAR},
+            </if>
+            <if test="businessSubcategory != null">
+                business_subcategory = #{businessSubcategory,jdbcType=VARCHAR},
+            </if>
+            <if test="departmentName != null">
+                department_name = #{departmentName,jdbcType=VARCHAR},
+            </if>
+            <if test="responsiblePerson != null">
+                responsible_person = #{responsiblePerson,jdbcType=VARCHAR},
+            </if>
+            <if test="workLocation != null">
+                work_location = #{workLocation,jdbcType=VARCHAR},
+            </if>
+            <if test="customZoneRemark != null">
+                custom_zone_remark = #{customZoneRemark,jdbcType=VARCHAR},
+            </if>
+            <if test="enabled != null">
+                is_enabled = #{enabled,jdbcType=BOOLEAN},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE zone = #{zone,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="delete" parameterType="string">
+        DELETE FROM public.t_profit_center WHERE zone = #{zone,jdbcType=VARCHAR}
+    </delete>
+
+    <select id="findDistinctRemarksSorted" resultType="map">
+        SELECT DISTINCT
+            custom_zone_remark,
+            region_category,
+            region_name
+        FROM
+            public.t_profit_center
+        WHERE
+            custom_zone_remark IS NOT NULL AND custom_zone_remark != ''
+        ORDER BY
+            region_category NULLS LAST, -- 将 NULL 排在后面
+            region_name NULLS LAST,
+            custom_zone_remark
+    </select>
+
+</mapper>

@@ -1,0 +1,85 @@
+/**
+ * Excel 导入弹窗专属样式
+ * 文件路径: src/main/resources/static/css/import_modal.css
+ */
+
+/* 弹窗显示时的基本样式 (如果不用 JS 控制 display) */
+/* #import-modal { display: flex; } */
+
+/* 拖拽区域在文件悬停时的视觉反馈 */
+#import-preview-area.drag-over {
+    border-color: #3b82f6; /* Tailwind blue-500 */
+    background-color: #eff6ff; /* Tailwind blue-50 */
+    border-style: solid;
+}
+
+/* 预览表格单元格基础样式 (如果需要覆盖 Tailwind 或统一设置) */
+#import-preview-table td,
+#import-preview-table th {
+    padding: 0.5rem 0.5rem; /* Tailwind p-2 */
+    font-size: 0.75rem; /* Tailwind text-xs */
+    line-height: 1rem; /* Tailwind leading-4 */
+    border-right: 1px solid #e5e7eb; /* 单元格右边框 */
+}
+#import-preview-table th {
+    white-space: nowrap; /* 防止表头换行 */
+}
+
+/* 使表格单元格可编辑时的样式 */
+#import-preview-tbody td[contenteditable="true"] {
+    background-color: #fefce8; /* Tailwind yellow-50 */
+    outline: 1px dashed #fbbf24; /* Tailwind amber-400 */
+    outline-offset: -1px;
+}
+
+/* 编辑后高亮单元格的样式 */
+#import-preview-tbody td.cell-edited {
+    background-color: #fff1f2 !important; /* Tailwind pink-50 */
+}
+
+/* 导入失败行的样式 */
+#import-preview-tbody tr.import-failed td {
+    background-color: #fee2e2; /* Tailwind red-100 */
+    color: #dc2626; /* Tailwind red-600 */
+    border-top: 1px solid #f87171; /* Tailwind red-400 */
+    border-bottom: 1px solid #f87171;
+}
+#import-preview-tbody tr.import-failed td:first-child { border-left: 2px solid #dc2626; }
+#import-preview-tbody tr.import-failed td:last-child { border-right: 2px solid #dc2626; }
+
+
+/* 导入成功行动画 (示例：渐隐消失) */
+@keyframes fadeOutAndShrink {
+    from {
+        opacity: 1;
+        transform: scaleY(1);
+        padding-top: 0.5rem; /* 对应 p-2 */
+        padding-bottom: 0.5rem;
+        line-height: 1rem;
+    }
+    to {
+        opacity: 0;
+        transform: scaleY(0);
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 0;
+        border: none; /* 隐藏边框 */
+    }
+}
+
+#import-preview-tbody tr.import-success-removing {
+    animation: fadeOutAndShrink 0.5s ease-out forwards;
+    /* forwards 保持动画结束状态 */
+}
+
+/* 导入状态/错误信息单元格样式 */
+#import-preview-table td.import-status-cell {
+    font-style: italic;
+    color: #ef4444; /* Tailwind red-500 */
+    white-space: normal; /* 允许错误信息换行 */
+    max-width: 150px; /* 限制最大宽度 */
+    overflow-wrap: break-word; /* 强制换行 */
+}
+#import-preview-table td.import-status-cell.success {
+    color: #16a34a; /* Tailwind green-600 */
+}

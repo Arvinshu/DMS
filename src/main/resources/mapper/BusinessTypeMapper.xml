@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.BusinessTypeMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.BusinessType">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="business_category" property="businessCategory" jdbcType="VARCHAR"/>
+        <result column="business_name" property="businessName" jdbcType="VARCHAR"/>
+        <result column="business_description" property="businessDescription" jdbcType="VARCHAR"/>
+        <result column="is_enabled" property="enabled" jdbcType="BOOLEAN"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, business_category, business_name, business_description, is_enabled, created_at, updated_at
+    </sql>
+
+    <sql id="Where_Clause">
+        <where>
+            <if test="id != null">
+                AND id = #{id,jdbcType=INTEGER}
+            </if>
+            <if test="businessCategory != null and businessCategory != ''">
+                AND business_category LIKE CONCAT('%', #{businessCategory}, '%')
+            </if>
+            <if test="businessName != null and businessName != ''">
+                AND business_name LIKE CONCAT('%', #{businessName}, '%')
+            </if>
+            <if test="businessDescription != null and businessDescription != ''">
+                AND business_description LIKE CONCAT('%', #{businessDescription}, '%')
+            </if>
+            <if test="enabled != null and enabled != ''">
+                AND is_enabled = (#{enabled}::boolean)
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultMap="BaseResultMap" parameterType="int">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_business_type
+        WHERE id = #{id,jdbcType=INTEGER}
+    </select>
+
+    <select id="findByName" resultMap="BaseResultMap" parameterType="string">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_business_type
+        WHERE business_name = #{businessName,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap" parameterType="map">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_business_type
+        <include refid="Where_Clause" />
+        ORDER BY id ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(*)
+        FROM public.t_business_type
+        <include refid="Where_Clause" />
+    </select>
+
+    <insert id="insert" parameterType="org.ls.entity.BusinessType" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO public.t_business_type
+        (business_category, business_name, business_description, is_enabled, created_at, updated_at)
+        VALUES (#{businessCategory,jdbcType=VARCHAR}, #{businessName,jdbcType=VARCHAR}, #{businessDescription,jdbcType=VARCHAR},
+                #{enabled,jdbcType=BOOLEAN}, CURRENT_TIMESTAMP, NULL)
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.BusinessType">
+        UPDATE public.t_business_type
+        <set>
+            <if test="businessCategory != null">
+                business_category = #{businessCategory,jdbcType=VARCHAR},
+            </if>
+            <if test="businessName != null">
+                business_name = #{businessName,jdbcType=VARCHAR},
+            </if>
+            <if test="businessDescription != null">
+                business_description = #{businessDescription,jdbcType=VARCHAR},
+            </if>
+            <if test="enabled != null">
+                is_enabled = #{enabled,jdbcType=BOOLEAN},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM public.t_business_type WHERE id = #{id,jdbcType=INTEGER}
+    </delete>
+
+</mapper>

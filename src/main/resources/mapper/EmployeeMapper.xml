@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.EmployeeMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.Employee">
+        <id column="employee" property="employee" jdbcType="VARCHAR"/>
+        <result column="employee_id" property="employeeId" jdbcType="VARCHAR"/>
+        <result column="employee_name" property="employeeName" jdbcType="VARCHAR"/>
+        <result column="dep_id" property="depId" jdbcType="INTEGER"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="active" property="active" jdbcType="BOOLEAN"/>
+        <result column="is_statistics" property="statistics" jdbcType="BOOLEAN"/>
+    </resultMap>
+
+    <resultMap id="ResultMapWithDeptName" type="org.ls.entity.Employee" extends="BaseResultMap">
+        <result column="department_name" property="departmentName" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        e.employee, e.employee_id, e.employee_name, e.dep_id, e.created_at, e.updated_at, e.active, e.is_statistics
+    </sql>
+
+    <sql id="Columns_With_Dept_Name">
+        <include refid="Base_Column_List" />, d.dep_name AS department_name
+    </sql>
+
+    <sql id="Where_Clause">
+        <where>
+            <if test="employee != null and employee != ''">
+                AND e.employee LIKE CONCAT('%', #{employee}, '%')
+            </if>
+            <if test="employeeId != null and employeeId != ''">
+                AND e.employee_id LIKE CONCAT('%', #{employeeId}, '%')
+            </if>
+            <if test="employeeName != null and employeeName != ''">
+                AND e.employee_name LIKE CONCAT('%', #{employeeName}, '%')
+            </if>
+            <if test="depId != null and depId != ''">
+                AND e.dep_id = #{depId,jdbcType=INTEGER}
+            </if>
+            <if test="active != null and active != ''">
+                AND e.active = (#{active}::boolean)
+            </if>
+            <if test="statistics != null and statistics != ''">
+                AND e.is_statistics = (#{statistics}::boolean)
+            </if>
+            <if test="departmentName != null and departmentName != ''">
+                AND d.dep_name LIKE CONCAT('%', #{departmentName}, '%')
+            </if>
+        </where>
+    </sql>
+
+    <select id="findByEmployee" resultMap="ResultMapWithDeptName" parameterType="string">
+        SELECT <include refid="Columns_With_Dept_Name" />
+        FROM public.t_employee e
+        LEFT JOIN public.t_department d ON e.dep_id = d.id
+        WHERE e.employee = #{employee,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findByEmployeeId" resultMap="ResultMapWithDeptName" parameterType="string">
+        SELECT <include refid="Columns_With_Dept_Name" />
+        FROM public.t_employee e
+        LEFT JOIN public.t_department d ON e.dep_id = d.id
+        WHERE e.employee_id = #{employeeId,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findAll" resultMap="ResultMapWithDeptName" parameterType="map">
+        SELECT <include refid="Columns_With_Dept_Name" />
+        FROM public.t_employee e
+        LEFT JOIN public.t_department d ON e.dep_id = d.id
+        <include refid="Where_Clause" />
+        ORDER BY e.employee_id ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(e.*)
+        FROM public.t_employee e
+        LEFT JOIN public.t_department d ON e.dep_id = d.id <include refid="Where_Clause" />
+    </select>
+
+    <select id="findByDepartmentId" resultMap="ResultMapWithDeptName" parameterType="int">
+        SELECT <include refid="Columns_With_Dept_Name" />
+        FROM public.t_employee e
+        LEFT JOIN public.t_department d ON e.dep_id = d.id
+        WHERE e.dep_id = #{depId,jdbcType=INTEGER}
+        ORDER BY e.employee_id ASC
+    </select>
+
+    <insert id="insert" parameterType="org.ls.entity.Employee">
+        INSERT INTO public.t_employee
+        (employee, employee_id, employee_name, dep_id, created_at, updated_at, active, is_statistics)
+        VALUES (#{employee,jdbcType=VARCHAR}, #{employeeId,jdbcType=VARCHAR}, #{employeeName,jdbcType=VARCHAR},
+                #{depId,jdbcType=INTEGER}, CURRENT_TIMESTAMP, NULL, #{active,jdbcType=BOOLEAN}, #{statistics,jdbcType=BOOLEAN})
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.Employee">
+        UPDATE public.t_employee
+        <set>
+            <if test="depId != null">
+                dep_id = #{depId,jdbcType=INTEGER},
+            </if>
+            <if test="active != null">
+                active = #{active,jdbcType=BOOLEAN},
+            </if>
+            <if test="statistics != null">
+                is_statistics = #{statistics,jdbcType=BOOLEAN},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE employee = #{employee,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="delete" parameterType="string">
+        DELETE FROM public.t_employee WHERE employee = #{employee,jdbcType=VARCHAR}
+    </delete>
+
+    <select id="countActiveStatsEmployees" resultType="long">
+        SELECT COUNT(*)
+        FROM public.t_employee
+        WHERE active = true AND is_statistics = true
+    </select>
+
+    <select id="countActiveStatsByDeptId" resultType="long" parameterType="int">
+        SELECT COUNT(*)
+        FROM public.t_employee
+        WHERE active = true AND is_statistics = true AND dep_id = #{depId,jdbcType=INTEGER}
+    </select>
+
+    <select id="findActiveStatsEmployeeNamesByDeptId" resultType="string" parameterType="int">
+        SELECT employee
+        FROM public.t_employee
+        WHERE active = true AND is_statistics = true AND dep_id = #{depId,jdbcType=INTEGER}
+        ORDER BY employee_id ASC
+    </select>
+
+    <select id="findEmployeeTimesheetStats" resultType="org.ls.dto.EmployeeTimesheetRow" parameterType="map">
+        WITH EmpStats AS (
+            SELECT
+                w.employee,
+                e.dep_id, -- 添加员工部门 ID
+                COALESCE(SUM(w.ts_hours), 0) AS total_hours,
+                COALESCE(SUM(CASE WHEN tc.is_project_timesheet = false THEN w.ts_hours ELSE 0 END), 0) AS non_project_hours,
+                COUNT(DISTINCT CASE WHEN tc.is_project_timesheet = true THEN w.proj_bm END) AS project_count
+            FROM
+                public.t_wkt w
+                    JOIN -- 使用 JOIN 获取 dep_id
+                    public.t_employee e ON w.employee = e.employee
+                    LEFT JOIN
+                public.t_timesheet_code tc ON w.ts_bm = tc.ts_bm
+            WHERE
+                w.ts_date &gt;= #{startDate}::date
+              AND w.ts_date &lt;= #{endDate}::date
+              AND e.active = true AND e.is_statistics = true -- 直接在 JOIN 条件或 WHERE 中过滤员工状态
+            GROUP BY
+                w.employee, e.dep_id -- Group by 中也需要包含 dep_id
+        )
+        SELECT
+            es.employee,
+            es.dep_id AS depId, -- 映射到 DTO 的 depId 字段
+            ROUND((es.total_hours / 8.0)::numeric, 2) AS totalWorkdays,
+            ROUND((es.non_project_hours / 8.0)::numeric, 2) AS nonProjectWorkdays,
+            ROUND(((es.total_hours - es.non_project_hours) / 8.0)::numeric, 2) AS projectWorkdays,
+            CASE
+                WHEN es.total_hours = 0 THEN 0.00
+                ELSE ROUND((((es.total_hours - es.non_project_hours) * 100.0) / es.total_hours)::numeric, 2)
+                END AS projectWorkdayRate,
+            es.project_count AS projectCount
+        FROM
+            EmpStats es
+        ORDER BY
+            projectWorkdayRate DESC, es.employee ASC
+    </select>
+
+</mapper>

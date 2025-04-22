@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<nav th:fragment="pagination" id="pagination-container" aria-label="分页导航" class="fixed bottom-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-center border-t border-gray-200 sm:px-6 z-40 shadow-inner">
+    <div class="flex-1 flex justify-between sm:hidden">
+        <button id="pagination-prev-mobile" type="button" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            上一页
+        </button>
+        <button id="pagination-next-mobile" type="button" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            下一页
+        </button>
+    </div>
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-center">
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="pagination-links-container"> <button id="pagination-prev" type="button" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="sr-only">上一页</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+            </button>
+                <button id="pagination-next" type="button" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="sr-only">下一页</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                </button>
+            </nav>
+            <p class="text-sm text-gray-700 ml-4 hidden md:inline-block"> 共 <span id="pagination-total-records" class="font-medium">0</span> 条记录，
+                第 <span id="pagination-current-page" class="font-medium">0</span> / <span id="pagination-total-pages" class="font-medium">0</span> 页
+            </p>
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* `th:fragment="pagination"` 定义片段。-->
+<!--* 使用 Tailwind 类进行样式设计，并使用 `fixed bottom-0` 将其固定在页面底部。`z-40` 确保它在侧边栏之下（如果侧边栏 `z-50`）。-->
+<!--* 包含移动端（简单上下页）和桌面端（完整页码）两种布局，使用 `sm:hidden` 和 `hidden sm:flex` 控制显示。-->
+<!--* 提供了上一页、下一页按钮的结构和 ID (`pagination-prev`, `pagination-next`, `pagination-prev-mobile`, `pagination-next-mobile`)。-->
+<!--* `id="pagination-container"` 是页码按钮的容器，`pagination.js` 将在此处动态生成页码。-->
+<!--* 包含用于显示总记录数、当前页、总页数的 `<span>` 元素，也由 JS-->

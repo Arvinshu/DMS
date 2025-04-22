@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.TimesheetCodeMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.TimesheetCode">
+        <id column="ts_bm" property="tsBm" jdbcType="VARCHAR"/>
+        <result column="ts_name" property="tsName" jdbcType="VARCHAR"/>
+        <result column="s_ts_bm" property="sTsBm" jdbcType="VARCHAR"/>
+        <result column="custom_project_name" property="customProjectName" jdbcType="VARCHAR"/>
+        <result column="is_project_timesheet" property="projectTimesheet" jdbcType="BOOLEAN"/>
+        <result column="is_enabled" property="enabled" jdbcType="BOOLEAN"/>
+        <result column="project_business_type" property="projectBusinessType" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        ts_bm, ts_name, s_ts_bm, custom_project_name, is_project_timesheet, is_enabled,
+        project_business_type, created_at, updated_at
+    </sql>
+
+    <sql id="Where_Clause">
+        <where>
+            <if test="tsBm != null and tsBm != ''">
+                AND ts_bm LIKE CONCAT('%', #{tsBm}, '%')
+            </if>
+            <if test="tsName != null and tsName != ''">
+                AND ts_name LIKE CONCAT('%', #{tsName}, '%')
+            </if>
+            <if test="sTsBm != null and sTsBm != ''">
+                AND s_ts_bm LIKE CONCAT('%', #{sTsBm}, '%')
+            </if>
+            <if test="customProjectName != null and customProjectName != ''">
+                AND custom_project_name LIKE CONCAT('%', #{customProjectName}, '%')
+            </if>
+            <if test="projectTimesheet != null and projectTimesheet != ''">
+                AND is_project_timesheet = (#{projectTimesheet}::boolean)
+            </if>
+            <if test="enabled != null and enabled != ''">
+                AND is_enabled = (#{enabled}::boolean)
+            </if>
+            <if test="projectBusinessType != null and projectBusinessType != ''">
+                AND project_business_type = #{projectBusinessType,jdbcType=VARCHAR}
+            </if>
+        </where>
+    </sql>
+
+    <select id="findByTsBm" resultMap="BaseResultMap" parameterType="string">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_timesheet_code
+        WHERE ts_bm = #{tsBm,jdbcType=VARCHAR}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap" parameterType="map">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_timesheet_code
+        <include refid="Where_Clause" />
+        ORDER BY ts_bm ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(*)
+        FROM public.t_timesheet_code
+        <include refid="Where_Clause" />
+    </select>
+
+    <insert id="insert" parameterType="org.ls.entity.TimesheetCode">
+        INSERT INTO public.t_timesheet_code
+        (ts_bm, ts_name, s_ts_bm, custom_project_name, is_project_timesheet, is_enabled, project_business_type, created_at, updated_at)
+        VALUES (#{tsBm,jdbcType=VARCHAR}, #{tsName,jdbcType=VARCHAR}, #{sTsBm,jdbcType=VARCHAR},
+                #{customProjectName,jdbcType=VARCHAR}, #{projectTimesheet,jdbcType=BOOLEAN}, #{enabled,jdbcType=BOOLEAN},
+                #{projectBusinessType,jdbcType=VARCHAR}, CURRENT_TIMESTAMP, NULL)
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.TimesheetCode">
+        UPDATE public.t_timesheet_code
+        <set>
+            <if test="tsName != null">
+                ts_name = #{tsName,jdbcType=VARCHAR},
+            </if>
+            <if test="sTsBm != null">
+                s_ts_bm = #{sTsBm,jdbcType=VARCHAR},
+            </if>
+            <if test="customProjectName != null">
+                custom_project_name = #{customProjectName,jdbcType=VARCHAR},
+            </if>
+            <if test="projectTimesheet != null">
+                is_project_timesheet = #{projectTimesheet,jdbcType=BOOLEAN},
+            </if>
+            <if test="enabled != null">
+                is_enabled = #{enabled,jdbcType=BOOLEAN},
+            </if>
+            <if test="projectBusinessType == null or projectBusinessType != null">
+                project_business_type = #{projectBusinessType,jdbcType=VARCHAR},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE ts_bm = #{tsBm,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="delete" parameterType="string">
+        DELETE FROM public.t_timesheet_code WHERE ts_bm = #{tsBm,jdbcType=VARCHAR}
+    </delete>
+
+</mapper>

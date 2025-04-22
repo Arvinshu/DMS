@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工时统计 - 部门管理系统</title>
+    <th:block th:replace="~{fragments/scripts :: commonScripts}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/import_modal.css}">
+</head>
+<body class="bg-gray-100 font-sans">
+
+<header th:replace="~{fragments/header :: navbar}"></header>
+
+<div class="flex">
+    <aside th:replace="~{fragments/sidebar :: sidebar(activeMenu='details', currentPage='timesheet_statistics')}"></aside>
+
+    <main class="flex-1 md:ml-64 mt-16 p-6 mb-16">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">工时统计明细</h1>
+            <button id="open-import-modal-button" type="button" class="btn btn-primary">
+                <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                导入数据
+            </button>
+        </div>
+
+
+        <div id="timesheet-filters" class="p-4 bg-white border border-gray-200 mb-6 rounded-lg shadow">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="filter-tr" class="block text-sm font-medium text-gray-700">工时区间:</label>
+                    <input type="text" id="filter-tr" name="tr" placeholder="输入区间关键字"
+                           class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="filter-employee" class="block text-sm font-medium text-gray-700">员工:</label>
+                    <input type="text" id="filter-employee" name="employee" placeholder="输入工号或姓名"
+                           class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="filter-dep" class="block text-sm font-medium text-gray-700">部门:</label>
+                    <input type="text" id="filter-dep" name="dep" placeholder="输入部门关键字"
+                           class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="filter-tsStatus" class="block text-sm font-medium text-gray-700">申请状态:</label>
+                    <select id="filter-tsStatus" name="tsStatus"
+                            class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">全部</option>
+                        <option value="待提交">待提交</option>
+                        <option value="审批中">审批中</option>
+                        <option value="审批完">审批完</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-tsBm" class="block text-sm font-medium text-gray-700">工时编码:</label>
+                    <input type="text" id="filter-tsBm" name="tsBm" placeholder="输入工时编码"
+                           class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="filter-zone" class="block text-sm font-medium text-gray-700">利润中心:</label>
+                    <input type="text" id="filter-zone" name="zone" placeholder="输入利润中心关键字"
+                           class="filter-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700">工时日期范围:</label>
+                    <div class="flex space-x-2 mt-1">
+                        <input type="date" id="filter-tsDateStart" name="tsDateStart"
+                               class="filter-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <span class="self-center text-gray-500">至</span>
+                        <input type="date" id="filter-tsDateEnd" name="tsDateEnd"
+                               class="filter-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+            <table class="divide-y divide-gray-200 table-fixed w-full">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-20">工时区间</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-9 whitespace-nowrap">员工</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-14">部门</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-6 whitespace-nowrap">状态</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-8 whitespace-nowrap">工时日期</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-7 whitespace-nowrap">小时数</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-12">工时编码</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-20">工时名称</th>
+                    <th scope="col" class="table-header text-center px-2 py-2 text-sm w-28">利润中心</th>
+                </tr>
+                </thead>
+                <tbody id="timesheet-table-body" class="bg-white divide-y divide-gray-200">
+                <tr>
+                    <td colspan="9" class="px-6 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
+                        <div id="loading-indicator">
+                            <div class="loader"></div>
+                            正在加载数据...
+                        </div>
+                        <div id="no-data-message" class="hidden">暂无数据</div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="timesheet-pagination-container">
+            <nav th:replace="~{fragments/pagination :: pagination}"></nav>
+        </div>
+
+    </main>
+</div>
+
+<div th:replace="~{fragments/import_modal :: importModal}"></div>
+
+<!--<script th:src="@{/js/lib/xlsx.full.min.js}"></script>-->
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+<!--<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>-->
+
+<script th:src="@{/js/timesheet_import.js}"></script>
+<script th:src="@{/js/timesheet_stats.js}"></script>
+
+<style>
+    .table-header {
+        @apply px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider;
+    }
+
+    .table-cell {
+        @apply px-6 py-4 whitespace-nowrap text-sm text-gray-800;
+    }
+
+    .input-field {
+        @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+    }
+
+    .select-field {
+        @apply mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+    }
+
+    .btn {
+        @apply inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .btn-primary {
+        @apply border-transparent text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500;
+    }
+
+    .btn-secondary {
+        @apply border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-indigo-500;
+    }
+
+    .btn-success {
+        @apply border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500;
+    }
+
+    .btn-sm {
+        @apply px-2.5 py-1.5 text-sm;
+    }
+
+    /* 注意: @apply 规则需要 Tailwind 构建过程支持。 */
+    /* 如果只用 CDN，应直接在元素上使用原子类，或在这里写原生 CSS。*/
+    /* 为确保 CDN 可用，将 @apply 替换为原生 CSS 或直接在 HTML 使用 */
+</style>
+
+</body>
+</html>
+
+
+<!--* **说明:**-->
+<!--* 引入了 `header`, `sidebar`, `scripts`, `pagination` 片段。-->
+<!--* 传递了 `currentPage='timesheet_statistics'` 和 `activeMenu='details'` 给侧边栏。-->
+<!--* 主内容区域 `main` 添加了 `md:ml-64` (左外边距，适配侧边栏宽度) 和 `mb-16` (底部外边距，防止被分页栏遮挡)。-->
+<!--* 定义了具体的过滤输入框 (`#timesheet-filters`)，并为每个输入框添加了 `filter-input` 类，方便 JS 选择。-->
+<!--* 创建了数据表格 (`<table>`) 结构，包含表头 (`<thead>`) 和表体 (`<tbody>`)。表体 `id="timesheet-table-body"` 用于 JS 动态填充数据。-->
+<!--* 包含了一个简单的加载提示 (`#loading-indicator`) 和无数据提示 (`#no-data-message`)。-->
+<!--* 在 `<body>` 底部引入了页面专属的 JS 文件 `timesheet_stats.j-->
+
+
+<!--**修改说明:**-->
+
+<!--1.  **`<head>` 部分:**-->
+<!--    * 引入了 `import_modal.css`。-->
+<!--    * 保留了 `commonScripts` 的引入。-->
+<!--    2.  **`<body>` 部分:**-->
+<!--* 在 `<h1>` 标题旁边添加了“导入数据”按钮，ID 为 `open-import-modal-button`。使用了 `flex justify-between items-center` 来布局标题和按钮。-->
+<!--    * 在 `<body>` 标签结束前：-->
+<!--    * 使用 `th:replace` 引入了 `import_modal.html` 片段。-->
+<!--    * 引入了 SheetJS 库 (`xlsx.full.min.js`)。**请确保此文件存在于指定路径或您使用了正确的 CDN 链接。**-->
+<!--    * 引入了新的 `timesheet_import.js` 文件。-->
+<!--    * 保留了原有的 `timesheet_stats.js` 文件引入。-->
+<!--    * **(重要)** 再次添加了之前移除的包含 `@apply` 的 `<style>` 块。虽然 `@apply` 在 CDN 环境下不被处理，但这些类名 (`table-header`, `table-cell`, `input-field`, `btn`, `btn-primary` 等) 在之前的 JS 代码中被**直接用于 `classList.add()`**。为了让这些 JS 代码能继续工作（或者说，为了让之前定义的样式能通过这些类名被引用），暂时将这些定义加回来。**更好的长期方案是修改所有 JS 代码，不再添加这些自定义类名，而是直接添加对应的 Tailwind 原子类组合。** 但为了让当前代码能运行，暂时恢复这些定义。-->
+<!--    现在，`timesheet_statistics.html` 页面包含了触发导入弹窗的按钮，并引入了弹窗的 HTML 结构、CSS 和所需的 JavaScript-->
+
+
+
+

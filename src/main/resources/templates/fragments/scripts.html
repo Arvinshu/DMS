@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="commonScripts">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
+<!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">-->
+
+    <script th:src="@{/js/common.js}"></script>
+    <script th:src="@{/js/pagination.js}"></script>
+
+    <script th:src="@{/js/lib/flatpickr.min.js}"></script>
+    <script th:src="@{/js/lib/zh.js}"></script>
+    <script th:src="@{/js/lib/html2canvas.min.js}"></script>
+    <script th:src="@{/js/lib/chart.js}"></script>
+
+<!--    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>-->
+<!--    <script src="https://npmcdn.com/flatpickr/dist/l10n/zh.js"></script>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha256-R4pqcOYV8lt7snxMQO/HSbSuyoAUgTTTKIoOi6ZNw3w=" crossorigin="anonymous"></script>-->
+</div>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* `th:fragment="commonScripts"` 定义片段。-->
+<!--* 引入了 Tailwind CSS 的浏览器版本 CDN。**请注意生产环境的最佳实践是预编译 CSS**。-->
+<!--* 使用 `th:src="@{...}"` 引入本地的 `common.js` 和 `pagination.js`。-->
+<!--* 注释中提到了如何根据需要条件性引入其他 JS，但建议在主页面模板中引入特定页面的-->

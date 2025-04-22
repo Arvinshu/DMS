@@ -1,0 +1,82 @@
+/**
+ * 全局或自定义样式表
+ * 文件路径: src/main/resources/static/css/style.css
+ *
+ * ==========================================================================
+ * 重要说明:
+ * --------------------------------------------------------------------------
+ * 本项目主要设计为使用 Tailwind CSS 框架 (通过 CDN 引入 @tailwindcss/browser)。
+ * Tailwind CSS 提倡使用原子类 (Utility Classes) 直接在 HTML 中构建样式，
+ * 以减少编写自定义 CSS 的需要。
+ *
+ * 因此，这个 style.css 文件预计会保持相对简洁。
+ * 它的主要用途包括：
+ * 1. 定义无法或难以用 Tailwind 原子类实现的复杂自定义组件样式。
+ * 2. 定义 CSS 动画 (如 keyframes)。
+ * 3. 全局基础样式覆盖 (如果 Tailwind 的 preflight 默认值不满足特定需求)。
+ * 4. 存放第三方库可能需要的少量自定义 CSS。
+ *
+ * 除非有充分理由，否则请优先考虑使用 Tailwind 原子类来设置样式。
+ * ==========================================================================
+ */
+
+/*
+ * === 加载动画样式 ===
+ * 用于在数据加载时显示视觉反馈。
+ * 这个动画之前在 datamaintenance.html 中内联定义，移到此处更符合规范。
+ */
+.loader {
+    border: 4px solid #f3f3f3; /* 浅灰色轨道 (类似 Tailwind gray-100/200) */
+    border-top: 4px solid #3b82f6; /* 蓝色旋转部分 (Tailwind blue-500) */
+    border-radius: 50%; /* 使其成为圆形 */
+    width: 30px;        /* 动画元素的宽度 */
+    height: 30px;       /* 动画元素的高度 */
+    animation: spin 1s linear infinite; /* 应用名为 'spin' 的动画，线性无限循环 */
+    margin: 20px auto; /* 上下 20px 外边距，左右自动居中 */
+}
+
+/*
+ * 定义 'spin' 动画的关键帧
+ */
+@keyframes spin {
+    0% { transform: rotate(0deg); } /* 动画开始时，旋转角度为 0 */
+    100% { transform: rotate(360deg); } /* 动画结束时，旋转角度为 360 度 */
+}
+
+/*
+ * === 编辑中单元格样式 ===
+ * 用于高亮显示数据维护表格中正在编辑的单元格。
+ * 这个样式之前在 datamaintenance.html 中内联定义。
+ */
+.editing-cell {
+    background-color: #fff1f2; /* 设置一个淡粉色背景 (类似 Tailwind pink-50) */
+    /* 可以添加其他样式，例如轻微的边框 */
+    /* border: 1px solid #fda4af; /* Tailwind pink-300 */
+}
+
+
+/*
+ * === 其他自定义样式区域 ===
+ * 如果需要，可以在下方添加其他自定义 CSS 规则。
+ * 例如：特定第三方库的样式调整、无法用 Tailwind 实现的复杂选择器等。
+ */
+
+/*
+.custom-component {
+    @apply p-4 bg-yellow-100 border border-yellow-300 rounded; /* 示例：混合 Tailwind 原子类 (需要 PostCSS 处理) */
+/* color: #a16207; /* Tailwind yellow-700 */
+/* }
+*/
+
+/*
+body {
+    /* 如果需要覆盖 Tailwind 的基础字体或颜色，可以在这里设置 */
+/* }
+*/
+
+/** **说明:***/
+/** 文件头部添加了详细的注释，强调了 Tailwind CSS 的优先地位以及此文件的预期用途。*/
+/** 包含了 `.loader` 动画的定义和 `@keyframes spin` 规则，并添加了注释解释其各部分。*/
+/** 包含了 `.editing-cell` 的样式，并添加了注释。*/
+/** 提供了注释掉的示例，说明如何添加其他自定义样式或覆盖基础样式。*/
+/** 整体保持简洁，符合在 Tailwind 项目中 `style.css` 的一般*/

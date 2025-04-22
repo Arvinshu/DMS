@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="tableFilters(filterIdPrefix)" class="p-4 bg-gray-100 border-b border-gray-200 mb-4 rounded-t-lg shadow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div class="filter-item hidden" data-filter-for="genericText"> <label th:for="${filterIdPrefix + '-textFilter'}" class="block text-sm font-medium text-gray-700">关键词:</label>
+            <input type="text" th:id="${filterIdPrefix + '-textFilter'}" name="textFilter"
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm filter-input"
+                   placeholder="输入关键词搜索...">
+        </div>
+
+        <div class="filter-item hidden" data-filter-for="status">
+            <label th:for="${filterIdPrefix + '-statusFilter'}" class="block text-sm font-medium text-gray-700">状态:</label>
+            <select th:id="${filterIdPrefix + '-statusFilter'}" name="statusFilter"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm filter-input">
+                <option value="">全部</option>
+                <option value="true">启用/在职</option>
+                <option value="false">停用/离职</option>
+            </select>
+        </div>
+
+        <div class="filter-item hidden" data-filter-for="department">
+            <label th:for="${filterIdPrefix + '-depFilter'}" class="block text-sm font-medium text-gray-700">部门:</label>
+            <select th:id="${filterIdPrefix + '-depFilter'}" name="depFilter"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm filter-input">
+                <option value="">所有部门</option>
+            </select>
+        </div>
+
+        <div class="filter-item hidden" data-filter-for="dateRange">
+            <label class="block text-sm font-medium text-gray-700">日期范围:</label>
+            <div class="flex space-x-2 mt-1">
+                <input type="date" th:id="${filterIdPrefix + '-dateStart'}" name="dateStart"
+                       class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm filter-input">
+                <span class="self-center">-</span>
+                <input type="date" th:id="${filterIdPrefix + '-dateEnd'}" name="dateEnd"
+                       class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm filter-input">
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* `th:fragment="tableFilters(filterIdPrefix)"` 定义片段，接收一个前缀用于区分不同表格的过滤器 ID。-->
+<!--* 提供了一些常见的过滤器类型（文本、状态选择、部门选择、日期范围）作为示例。-->
+<!--* 使用 `hidden` 类和 `data-filter-for` 属性，意图是由 JavaScript 根据当前表格需要哪些过滤器来控制显示相应的 `div.filter-item`。-->
+<!--* 输入元素添加了 `filter-input` 类，方便 JavaScript 统一获取所有过滤器的值。-->
+<!--* 部门选择框等需要动态填充选项的部分留空，由 JavaScript 负责加载。-->
+<!--* 注释掉了查询/重置按钮，因为需求中提到的是输入时自动查询。如果需要手动触发，可以取消注释并添加相应的 JS 事件监听。-->
+<!--* **重要:** 这个通用片段的实用性取决于 JavaScript 如何有效地配置和使用它。在实际项目中，直接在各自的管理页面中定义所需的过滤器可能更-->

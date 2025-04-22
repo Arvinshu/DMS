@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="importModal" id="import-modal"
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden">
+
+    <div class="relative mx-auto p-5 border w-full max-w-5xl shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center border-b pb-3 mb-3">
+            <h3 class="text-xl font-semibold text-gray-900">Excel 工时数据导入</h3>
+            <button id="import-modal-close-button" type="button"
+                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div id="modal-buttons" class="flex items-center space-x-3 mb-4">
+            <button id="upload-excel-button" type="button" class="btn btn-primary">
+                <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                上传文件
+            </button>
+            <button id="clear-preview-button" type="button" class="btn btn-secondary">
+                <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                清空数据
+            </button>
+            <button id="submit-data-button" type="button" class="btn btn-success" disabled>
+                <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                提交数据
+            </button>
+            <input type="file" id="hidden-file-input" multiple accept=".xls,.xlsx,.csv" class="hidden">
+            <span id="submit-status" class="text-sm text-gray-600 ml-4"></span>
+        </div>
+
+        <div id="import-stats"
+             class="flex flex-wrap items-center space-x-4 mb-4 p-3 bg-gray-50 rounded border border-gray-200 text-sm">
+            <span>总条数: <strong id="stats-total-records" class="text-blue-600">0</strong></span>
+            <span class="text-orange-600 font-semibold"> | </span>
+            <span>数据时间跨度:
+                    <strong id="stats-date-min" class="text-red-600">N/A</strong> -
+                    <strong id="stats-date-max" class="text-red-600">N/A</strong>
+                </span>
+            <span class="text-orange-600 font-semibold"> | </span>
+            <span>工时汇总: <strong id="stats-total-hours" class="text-blue-600">0</strong> 人天</span>
+        </div>
+
+        <div id="import-preview-area"
+             class="border border-dashed border-gray-400 rounded-lg p-4 min-h-[300px] max-h-[50vh] overflow-y-auto bg-gray-50 relative">
+            <div id="drag-drop-zone"
+                 class="absolute inset-0 flex items-center justify-center text-gray-500 text-lg pointer-events-none">
+                拖拽 Excel 文件到此区域 或 点击 "上传文件"
+            </div>
+            <div id="parse-error-display" class="text-red-600 mb-2 hidden"></div>
+            <table id="import-preview-table" class="min-w-full divide-y divide-gray-200 text-xs">
+                <thead class="bg-gray-100 sticky top-0 z-10">
+                <tr>
+                    <th class="table-header px-2 py-2 w-10">序号(自动生成)</th>
+                    <th class="table-header px-2 py-2">工时申请单号(cpk)</th>
+                    <th class="table-header px-2 py-2">工时区间</th>
+                    <th class="table-header px-2 py-2">申请人(cpk)</th>
+                    <th class="table-header px-2 py-2">申请人部门</th>
+                    <th class="table-header px-2 py-2">实际填报工时部门</th>
+                    <th class="table-header px-2 py-2">申请状态</th>
+                    <th class="table-header px-2 py-2">财务年月</th>
+                    <th class="table-header px-2 py-2">自然年月</th>
+                    <th class="table-header px-2 py-2">工时日期(cpk)</th>
+                    <th class="table-header px-2 py-2">工时小时数</th>
+                    <th class="table-header px-2 py-2">人月数</th>
+                    <th class="table-header px-2 py-2">项目编码</th>
+                    <th class="table-header px-2 py-2">工时编码(cpk)</th>
+                    <th class="table-header px-2 py-2">工时名称</th>
+                    <th class="table-header px-2 py-2">利润中心</th>
+                    <th class="table-header px-2 py-2">支持工时编码</th>
+                    <th class="table-header px-2 py-2">支持工时名称</th>
+                    <th class="table-header px-2 py-2">工时备注</th>
+                    <th class="table-header px-2 py-2">导入状态</th>
+                </tr>
+                </thead>
+                <tbody id="import-preview-tbody" class="bg-white divide-y divide-gray-200">
+                <tr id="initial-tbody-message">
+                    <td colspan="20" class="text-center py-10 text-gray-400">请上传或拖拽文件</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* 使用 `th:fragment="importModal"` 定义片段。-->
+<!--* 外层 `div#import-modal` 用于控制显示/隐藏和背景遮罩。-->
+<!--* 内层 `div` 包含弹窗内容，使用 Tailwind 设置了最大宽度、边框、阴影等。-->
+<!--* 包含了头部、关闭按钮、操作按钮区（上传、清空、提交）、统计信息区和数据表格区。-->
+<!--* 为关键元素设置了 ID，方便 JS 获取和操作。-->
+<!--* “提交数据”按钮初始状态为 `disabled`。-->
+<!--* 数据表格区包含了一个 `#drag-drop-zone` 用于视觉提示和事件绑定，以及一个 `#parse-error-display` 用于显示解析错误。-->
+<!--* 表格 `<thead>` 根据 `t_wkt` 表的列注释定义了表头，并增加了“序号”和“导入状态”列。-->
+<!--* `<tbody>` (`#import-preview-tbody`) 初始包含提示信息，之后由 JS -->
+
+

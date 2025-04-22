@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.TimesheetWorkMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.TimesheetWork">
+        <id column="ts_id" property="tsId" jdbcType="VARCHAR"/>
+        <id column="employee" property="employee" jdbcType="VARCHAR"/>
+        <id column="ts_date" property="tsDate" jdbcType="DATE"/>
+        <id column="ts_bm" property="tsBm" jdbcType="VARCHAR"/> <result column="tr" property="tr" jdbcType="VARCHAR"/>
+        <result column="dep" property="dep" jdbcType="VARCHAR"/>
+        <result column="ts_status" property="tsStatus" jdbcType="VARCHAR"/>
+        <result column="ts_ym" property="tsYm" jdbcType="VARCHAR"/>
+        <result column="nature_ym" property="natureYm" jdbcType="VARCHAR"/>
+        <result column="ts_hours" property="tsHours" jdbcType="REAL"/>
+        <result column="ts_month" property="tsMonth" jdbcType="REAL"/>
+        <result column="proj_bm" property="projBm" jdbcType="VARCHAR"/>
+        <result column="ts_name" property="tsName" jdbcType="VARCHAR"/>
+        <result column="zone" property="zone" jdbcType="VARCHAR"/>
+        <result column="s_proj_bm" property="sProjBm" jdbcType="VARCHAR"/>
+        <result column="s_ts_bm" property="sTsBm" jdbcType="VARCHAR"/>
+        <result column="ts_comments" property="tsComments" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        ts_id, tr, employee, dep, ts_status, ts_ym, nature_ym, ts_date, ts_hours, ts_month,
+        proj_bm, ts_bm, ts_name, zone, s_proj_bm, s_ts_bm, ts_comments
+    </sql>
+
+    <sql id="Statistics_Where_Clause">
+        <where>
+            <if test="tr != null and tr != ''">
+                AND tr LIKE CONCAT('%', #{tr}, '%')
+            </if>
+            <if test="employee != null and employee != ''">
+                AND employee LIKE CONCAT('%', #{employee}, '%')
+            </if>
+            <if test="dep != null and dep != ''">
+                AND dep LIKE CONCAT('%', #{dep}, '%')
+            </if>
+            <if test="tsStatus != null and tsStatus != ''">
+                AND ts_status = #{tsStatus,jdbcType=VARCHAR}
+            </if>
+            <if test="tsDateStart != null and tsDateStart != ''">
+                AND ts_date >= #{tsDateStart}::date
+            </if>
+            <if test="tsDateEnd != null and tsDateEnd != ''">
+                AND ts_date &lt;= #{tsDateEnd}::date </if>
+            <if test="tsBm != null and tsBm != ''">
+                AND ts_bm LIKE CONCAT('%', #{tsBm}, '%')
+            </if>
+            <if test="tsName != null and tsName != ''">
+                AND ts_name LIKE CONCAT('%', #{tsName}, '%')
+            </if>
+            <if test="zone != null and zone != ''">
+                AND zone LIKE CONCAT('%', #{zone}, '%')
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultMap="BaseResultMap" parameterType="map">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM
+        public.t_wkt
+        WHERE
+        ts_id = #{tsId,jdbcType=VARCHAR}
+        AND employee = #{employee,jdbcType=VARCHAR}
+        AND ts_date = #{tsDate,jdbcType=DATE}
+        AND ts_bm = #{tsBm, jdbcType=VARCHAR} </select>
+
+    <select id="findTimesheetStatistics" resultType="java.util.Map" parameterType="map">
+        SELECT
+        tr, employee, dep, ts_status, ts_date, ts_hours, ts_bm, ts_name, zone
+        FROM
+        public.t_wkt
+        <include refid="Statistics_Where_Clause" />
+        ORDER BY
+        ts_date DESC, employee ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countTimesheetStatistics" resultType="long" parameterType="map">
+        SELECT count(*)
+        FROM public.t_wkt
+        <include refid="Statistics_Where_Clause" />
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap" parameterType="map">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM
+        public.t_wkt
+        ORDER BY
+        ts_date DESC, employee ASC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countAll" resultType="long" parameterType="map">
+        SELECT count(*)
+        FROM public.t_wkt
+    </select>
+
+    <select id="findDistinctDepartments" resultType="java.lang.String">
+        SELECT DISTINCT dep FROM public.t_wkt WHERE dep IS NOT NULL ORDER BY dep
+    </select>
+
+    <select id="findDistinctEmployees" resultType="java.lang.String">
+        SELECT DISTINCT employee FROM public.t_wkt WHERE employee IS NOT NULL ORDER BY employee
+    </select>
+
+    <select id="findDistinctTimesheetCodes" resultType="java.util.Map">
+        SELECT DISTINCT ts_bm, ts_name, s_ts_bm
+        FROM public.t_wkt
+        WHERE ts_bm IS NOT NULL
+        ORDER BY ts_bm
+    </select>
+
+    <select id="findDistinctProfitCenters" resultType="java.lang.String">
+        SELECT DISTINCT zone FROM public.t_wkt WHERE zone &gt; '' ORDER BY zone
+    </select>
+
+    <select id="findLatestDepByEmployee" resultType="java.lang.String" parameterType="string">
+        SELECT dep
+        FROM public.t_wkt
+        WHERE employee = #{employee,jdbcType=VARCHAR}
+        ORDER BY ts_date DESC LIMIT 1 </select>
+
+    <insert id="insert" parameterType="org.ls.entity.TimesheetWork">
+        INSERT INTO public.t_wkt
+        (ts_id, tr, employee, dep, ts_dep, ts_status, ts_ym, nature_ym, ts_date, ts_hours, ts_month,
+         proj_bm, ts_bm, ts_name, zone, s_proj_bm, s_ts_bm, ts_comments)
+        VALUES
+            (#{tsId,jdbcType=VARCHAR}, #{tr,jdbcType=VARCHAR}, #{employee,jdbcType=VARCHAR}, #{dep,jdbcType=VARCHAR}, #{tsDep,jdbcType=VARCHAR},
+             #{tsStatus,jdbcType=VARCHAR}, #{tsYm,jdbcType=VARCHAR}, #{natureYm,jdbcType=VARCHAR}, #{tsDate,jdbcType=DATE},
+             #{tsHours,jdbcType=REAL}, #{tsMonth,jdbcType=REAL}, #{projBm,jdbcType=VARCHAR}, #{tsBm,jdbcType=VARCHAR},
+             #{tsName,jdbcType=VARCHAR}, #{zone,jdbcType=VARCHAR}, #{sProjBm,jdbcType=VARCHAR}, #{sTsBm,jdbcType=VARCHAR},
+             #{tsComments,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="update" parameterType="org.ls.entity.TimesheetWork">
+        UPDATE public.t_wkt
+        <set>
+            <if test="tr != null"> tr = #{tr,jdbcType=VARCHAR}, </if>
+            <if test="dep != null"> dep = #{dep,jdbcType=VARCHAR}, </if>
+            <if test="tsStatus != null"> ts_status = #{tsStatus,jdbcType=VARCHAR}, </if>
+            <if test="tsYm != null"> ts_ym = #{tsYm,jdbcType=VARCHAR}, </if>
+            <if test="natureYm != null"> nature_ym = #{natureYm,jdbcType=VARCHAR}, </if>
+            <if test="tsHours != null"> ts_hours = #{tsHours,jdbcType=REAL}, </if>
+            <if test="tsMonth != null"> ts_month = #{tsMonth,jdbcType=REAL}, </if>
+            <if test="projBm != null"> proj_bm = #{projBm,jdbcType=VARCHAR}, </if>
+            <if test="tsName != null"> ts_name = #{tsName,jdbcType=VARCHAR}, </if>
+            <if test="zone != null"> zone = #{zone,jdbcType=VARCHAR}, </if>
+            <if test="sProjBm != null"> s_proj_bm = #{sProjBm,jdbcType=VARCHAR}, </if>
+            <if test="sTsBm != null"> s_ts_bm = #{sTsBm,jdbcType=VARCHAR}, </if>
+            <if test="tsComments != null"> ts_comments = #{tsComments,jdbcType=VARCHAR}, </if>
+        </set>
+        WHERE
+        ts_id = #{tsId,jdbcType=VARCHAR}
+        AND employee = #{employee,jdbcType=VARCHAR}
+        AND ts_date = #{tsDate,jdbcType=DATE}
+        AND ts_bm = #{tsBm, jdbcType=VARCHAR} </update>
+
+    <delete id="delete" parameterType="map">
+        DELETE FROM public.t_wkt
+        WHERE
+            ts_id = #{tsId,jdbcType=VARCHAR}
+          AND employee = #{employee,jdbcType=VARCHAR}
+          AND ts_date = #{tsDate,jdbcType=DATE}
+          AND ts_bm = #{tsBm, jdbcType=VARCHAR} </delete>
+
+    <select id="findKeyProjectsAboveThreshold" resultType="map" parameterType="map">
+        SELECT
+            w.ts_bm,
+            MAX(tc.custom_project_name) AS custom_project_name, -- 使用 MAX 获取项目名称
+            SUM(w.ts_hours) AS total_hours
+        FROM
+            public.t_wkt w
+                JOIN
+            public.t_timesheet_code tc ON w.ts_bm = tc.ts_bm
+        WHERE
+            w.ts_date &gt;= #{startDate}::date AND w.ts_date &lt;= #{endDate}::date
+          AND tc.is_project_timesheet = true
+          AND w.ts_bm IS NOT NULL
+          AND w.employee IN (SELECT emp.employee FROM public.t_employee emp WHERE emp.active = true AND emp.is_statistics = true)
+        GROUP BY
+            w.ts_bm
+        HAVING
+            SUM(w.ts_hours) &gt; #{minHours} ORDER BY
+            total_hours DESC
+    </select>
+
+<!--    <select id="findEmployeesForProjectByDept" resultType="map" parameterType="map">-->
+<!--        SELECT-->
+<!--            d.id AS dep_id,-->
+<!--            d.dep_name,-->
+<!--            STRING_AGG(e.employee_name, ', ' ORDER BY e.employee_id) AS employee_list &#45;&#45; 聚合员工姓名,然后去重。用以在重点项目中显示。-->
+<!--        FROM-->
+<!--            public.t_wkt w-->
+<!--                JOIN-->
+<!--            public.t_employee e ON w.employee = e.employee-->
+<!--                JOIN-->
+<!--            public.t_department d ON e.dep_id = d.id-->
+<!--        WHERE-->
+<!--            w.ts_bm = #{tsBm, jdbcType=VARCHAR}-->
+<!--          AND w.ts_date &gt;= #{startDate}::date AND w.ts_date &lt;= #{endDate}::date-->
+<!--          AND e.active = true AND e.is_statistics = true &#45;&#45; 确保员工有效-->
+<!--          AND d.active = true AND d.is_statistics = true &#45;&#45; 确保部门有效-->
+<!--        GROUP BY-->
+<!--            d.id, d.dep_name-->
+<!--        ORDER BY-->
+<!--            d.id-->
+<!--    </select>-->
+
+    <select id="findEmployeesForProjectByDept" resultType="map" parameterType="map">
+        WITH unique_employees AS (
+            SELECT DISTINCT
+                d.id AS dep_id,
+                e.employee_id,
+                e.employee_name
+            FROM
+                public.t_wkt w
+                    JOIN
+                public.t_employee e ON w.employee = e.employee
+                    JOIN
+                public.t_department d ON e.dep_id = d.id
+            WHERE
+                w.ts_bm = #{tsBm, jdbcType=VARCHAR}
+              AND w.ts_date &gt;= #{startDate}::date AND w.ts_date &lt;= #{endDate}::date
+              AND e.active = true AND e.is_statistics = true
+              AND d.active = true AND d.is_statistics = true
+        )
+        SELECT
+            ue.dep_id,
+            d.dep_name,
+            STRING_AGG(ue.employee_name, ', ' ORDER BY ue.employee_id) AS employee_list
+        FROM
+            unique_employees ue
+                JOIN
+            public.t_department d ON ue.dep_id = d.id
+        GROUP BY
+            ue.dep_id, d.dep_name
+        ORDER BY
+            ue.dep_id
+    </select>
+
+    <select id="findProfitCenterWorkdaysByDept" resultType="map" parameterType="map">
+        SELECT
+            pc.custom_zone_remark,
+            pc.region_category, -- 用于排序
+            pc.region_name,     -- 用于排序
+            d.id AS dep_id,
+            d.dep_name,
+            COALESCE(SUM(w.ts_hours) / 8.0, 0) AS total_workdays -- 计算人天
+        FROM
+            public.t_wkt w
+                JOIN
+            public.t_employee e ON w.employee = e.employee
+                JOIN
+            public.t_department d ON e.dep_id = d.id
+                JOIN
+            public.t_timesheet_code tc ON w.ts_bm = tc.ts_bm
+                JOIN
+            public.t_profit_center pc ON w.zone = pc.zone -- 假设 t_wkt.zone 关联 t_profit_center.zone
+        WHERE
+            w.ts_date &gt;= #{startDate}::date AND w.ts_date &lt;= #{endDate}::date
+          AND e.active = true AND e.is_statistics = true -- 员工有效
+          AND d.active = true AND d.is_statistics = true -- 部门有效
+          AND tc.is_project_timesheet = true          -- 只统计项目工时
+          AND pc.custom_zone_remark IS NOT NULL       -- 确保利润中心备注不为空
+        GROUP BY
+            pc.custom_zone_remark, pc.region_category, pc.region_name, d.id, d.dep_name
+        -- 排序可以移到 Service 层处理，或者在这里添加
+        -- ORDER BY pc.region_category, pc.region_name, pc.custom_zone_remark, d.id
+    </select>
+
+    <select id="findMonthlyProjectCounts" resultType="org.ls.dto.MonthlyProjectCount" parameterType="map">
+        SELECT
+            EXTRACT(MONTH FROM w.ts_date)::integer AS month, -- 提取月份并转为整数
+            COUNT(DISTINCT w.ts_bm) AS projectCount       -- 对项目工时编码去重计数
+        FROM
+            public.t_wkt w
+                JOIN
+            public.t_timesheet_code tc ON w.ts_bm = tc.ts_bm
+        WHERE
+            w.ts_date &gt;= #{startDate}::date AND w.ts_date &lt;= #{endDate}::date
+          AND tc.is_project_timesheet = true  -- 只统计项目工时
+          AND w.ts_bm IS NOT NULL
+        -- 可以考虑是否需要过滤员工状态，如果需要则 JOIN t_employee
+        -- AND w.employee IN (SELECT emp.employee FROM public.t_employee emp WHERE emp.active = true AND emp.is_statistics = true)
+        GROUP BY
+            EXTRACT(MONTH FROM w.ts_date)
+        ORDER BY
+            month ASC
+    </select>
+
+</mapper>
+
+<!--
+* **修改说明:**
+    * 添加了 `findKeyProjectsAboveThreshold` 的 SQL，用于找出工时达标的项目。
+    * 添加了 `findEmployeesForProjectByDept` 的 SQL，使用 `STRING_AGG` (PostgreSQL 特有) 按部门聚合参与指定项目的员工姓名列表。
+    * 添加了 `findProfitCenterWorkdaysByDept` 的 SQL，用于查询按利润中心备注和部门分组的项目人天数，这是生成交叉表的基础
+
+* **修改说明:**
+    * 添加了 `id="findMonthlyProjectCounts"` 的 `<select>` 语句。
+    * 使用 `EXTRACT(MONTH FROM w.ts_date)::integer` 提取月份作为 `month`。
+    * 使用 `COUNT(DISTINCT w.ts_bm)` 对项目工时编码进行去重计数作为 `projectCount`。
+    * 通过 JOIN `t_timesheet_code` 并筛选 `tc.is_project_timesheet = true` 来确保只统计项目。
+    * 添加了时间范围过滤。
+    * 按月份分组和排序。
+    * `resultType` 设置为我们新创建的 DTO `org.ls.dto.MonthlyProjectCoun
+-->

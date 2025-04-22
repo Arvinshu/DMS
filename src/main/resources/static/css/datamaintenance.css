@@ -1,0 +1,49 @@
+/**
+ * 数据维护页面专属样式表
+ * 文件路径: src/main/resources/static/css/datamaintenance.css
+ * 包含 datamaintenance.html 特有的、非 Tailwind 原子类直接提供的样式。
+ */
+
+/*
+ * === 加载动画样式 ===
+ * 用于在数据表格加载时显示。
+ */
+.loader {
+    border: 4px solid #f3f3f3; /* 浅灰色轨道 */
+    border-top: 4px solid #3b82f6; /* 蓝色旋转部分 (Tailwind blue-500) */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto; /* 居中 */
+}
+
+/* 定义 'spin' 动画的关键帧 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/*
+ * === 编辑中单元格样式 ===
+ * 用于高亮显示正在编辑的表格单元格。
+ * 这个样式类由 JavaScript 在进入编辑状态时添加到相应的 <td> 或 <input>/<select> 上。
+ */
+.editing-cell {
+    background-color: #fff1f2 !important; /* 淡粉色背景 (类似 Tailwind pink-50), 使用 !important 确保覆盖其他背景 */
+    /* 可以添加过渡效果 */
+    /* transition: background-color 0.3s ease; */
+}
+
+/*
+ * 注意：按钮、输入框、表格单元格等的基础样式和特效
+ * 应该通过直接在 HTML 元素上应用 Tailwind 原子类来实现，
+ * 例如 <button class="btn btn-primary ...">, <input class="input-field ...">。
+ * 不应在此文件中使用 @apply 重新定义它们。
+ */
+
+
+/** **说明:***/
+/** 这个文件只包含 `.loader` 和 `.editing-cell` 的标准 CSS 定义。*/
+/** 特别强调了其他元素的样式应由 HTML 中的 Tailwind 类负责。*/
+/** 为 `.editing-cell` 添加了 `!important`，以增加其优先级，确保能覆盖掉可能的其他背景色样式（例如输入框默认背*/

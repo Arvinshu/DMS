@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<aside th:fragment="sidebar(activeMenu, currentPage)" class="w-64 bg-gray-800 text-gray-300 min-h-screen p-4 fixed top-16 left-0 h-full overflow-y-auto shadow-lg hidden md:block">
+    <nav>
+        <div th:if="${currentPage == 'timesheet_statistics'}">
+            <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2">工时视图</h3>
+            <ul>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'details'} ? 'bg-gray-900 text-white' : ''">
+                        部门工时明细 (示例)
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'summary'} ? 'bg-gray-900 text-white' : ''">
+                        月度汇总 (示例)
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div th:if="${currentPage == 'datamaintenance'}">
+            <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2 mt-4">数据维护</h3>
+            <ul>
+                <li>
+                    <a href="#" data-target="departments" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'departments'} ? 'bg-gray-900 text-white' : ''">
+                        部门管理
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-target="employees" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'employees'} ? 'bg-gray-900 text-white' : ''">
+                        员工管理
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-target="timesheet-codes" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'timesheet-codes'} ? 'bg-gray-900 text-white' : ''">
+                        工时管理
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-target="business-types" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'business-types'} ? 'bg-gray-900 text-white' : ''">
+                        业务管理
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-target="profit-centers" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'profit-centers'} ? 'bg-gray-900 text-white' : ''">
+                        利润中心管理
+                    </a>
+                </li>
+            </ul>
+            <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2 mt-6">数据同步</h3>
+            <ul>
+                <li>
+                    <a href="#" data-target="sync-data" class="data-menu-item flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700 hover:text-white"
+                       th:classappend="${activeMenu == 'sync-data'} ? 'bg-gray-900 text-white' : ''">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m-15.357-2a8.001 8.001 0 0015.357 2M15 15H9"></path></svg>
+                        维度数据同步
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+    </nav>
+</aside>
+
+</body>
+</html>
+
+<!--* **说明:**-->
+<!--* `th:fragment="sidebar(activeMenu, currentPage)"` 定义片段，并接收 `activeMenu` 和 `currentPage` 参数。-->
+<!--* 使用 Tailwind 类设置样式（宽度、背景、颜色、最小高度、内边距、固定定位、溢出处理、阴影）。`hidden md:block` 使其在小屏幕隐藏，中等及以上屏幕显示。-->
+<!--* `th:if` 用于根据 `currentPage` 参数条件渲染不同的菜单部分。-->
+<!--* 对于数据维护菜单，链接的 `href` 设置为 `#`，并添加 `data-target` 属性，供 JavaScript 用来识别点击后应加载哪个模块的内容。-->
+<!--* `th:classappend` 根据传入的 `activeMenu` 参数高亮当前活动的菜-->
