@@ -81,7 +81,7 @@
         row.classList.add('editing-row');
 
         // 利润中心全名 (主键)
-        const cellZone = row.insertCell(); cellZone.classList.add('table-cell text-sm');
+        const cellZone = row.insertCell(); cellZone.classList.add('table-cell');
         const inputZone = document.createElement('input'); inputZone.type = 'text'; inputZone.name = 'zone';
         inputZone.value = initialData.zone || ''; inputZone.placeholder = '输入利润中心全名 (主键)';
         inputZone.classList.add('input-field', 'editing-cell'); inputZone.required = true;
@@ -89,14 +89,14 @@
         cellZone.appendChild(inputZone);
 
         // 业务类型 (改为可编辑)
-        const cellBusinessType = row.insertCell(); cellBusinessType.classList.add('table-cell text-sm');
+        const cellBusinessType = row.insertCell(); cellBusinessType.classList.add('table-cell');
         const inputBusinessType = document.createElement('input'); inputBusinessType.type = 'text'; inputBusinessType.name = 'businessType';
         inputBusinessType.value = initialData.businessType || ''; inputBusinessType.placeholder = '业务类型';
         inputBusinessType.classList.add('input-field', 'editing-cell', 'w-24');
         cellBusinessType.appendChild(inputBusinessType);
 
         // 区域分类 (改为可编辑)
-        const cellRegionCat = row.insertCell(); cellRegionCat.classList.add('table-cell text-sm');
+        const cellRegionCat = row.insertCell(); cellRegionCat.classList.add('table-cell');
         const inputRegionCat = document.createElement('input'); inputRegionCat.type = 'text'; inputRegionCat.name = 'regionCategory';
         inputRegionCat.value = initialData.regionCategory || ''; inputRegionCat.placeholder = '区域分类';
         inputRegionCat.classList.add('input-field', 'editing-cell', 'w-24');
@@ -107,28 +107,28 @@
         // 这里暂时省略，如果需要编辑，按照 businessType 的方式添加 input
 
         // 区域负责人
-        const cellRespPerson = row.insertCell(); cellRespPerson.classList.add('table-cell text-sm');
+        const cellRespPerson = row.insertCell(); cellRespPerson.classList.add('table-cell');
         const inputRespPerson = document.createElement('input'); inputRespPerson.type = 'text'; inputRespPerson.name = 'responsiblePerson';
         inputRespPerson.value = initialData.responsiblePerson || ''; inputRespPerson.placeholder = '输入负责人姓名';
         inputRespPerson.classList.add('input-field', 'editing-cell');
         cellRespPerson.appendChild(inputRespPerson);
 
         // 工作地点
-        const cellWorkLoc = row.insertCell(); cellWorkLoc.classList.add('table-cell text-sm');
+        const cellWorkLoc = row.insertCell(); cellWorkLoc.classList.add('table-cell');
         const inputWorkLoc = document.createElement('input'); inputWorkLoc.type = 'text'; inputWorkLoc.name = 'workLocation';
         inputWorkLoc.value = initialData.workLocation || ''; inputWorkLoc.placeholder = '输入工作地点';
         inputWorkLoc.classList.add('input-field', 'editing-cell');
         cellWorkLoc.appendChild(inputWorkLoc);
 
         // 备注 (自定义)
-        const cellRemark = row.insertCell(); cellRemark.classList.add('table-cell text-sm');
+        const cellRemark = row.insertCell(); cellRemark.classList.add('table-cell');
         const inputRemark = document.createElement('textarea'); inputRemark.name = 'customZoneRemark';
         inputRemark.value = initialData.customZoneRemark || ''; inputRemark.placeholder = '输入自定义备注';
         inputRemark.classList.add('input-field', 'editing-cell', 'h-10', 'text-sm'); inputRemark.rows = 1;
         cellRemark.appendChild(inputRemark);
 
         // 启用状态
-        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell text-sm');
+        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell');
         const selectEnabled = document.createElement('select'); selectEnabled.name = 'enabled';
         selectEnabled.classList.add('select-field', 'editing-cell');
         selectEnabled.innerHTML = `<option value="true" ${initialData.enabled !== false ? 'selected' : ''}>启用</option><option value="false" ${initialData.enabled === false ? 'selected' : ''}>停用</option>`;

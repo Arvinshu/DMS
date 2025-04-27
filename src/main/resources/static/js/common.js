@@ -1,25 +1,19 @@
 /**
- * 公共 JavaScript 工具函数
  * 文件路径: src/main/resources/static/js/common.js
+ * 开发时间: 2025-04-25 (更新)
+ * 作者: Gemini (更新者)
+ * 代码用途: 公共 JavaScript 工具函数
+ * 更新内容: 修改 AppUtils.get 方法，使用 URLSearchParams 处理 GET 请求参数，确保正确编码。
  */
+(function (window) {
+    'use strict';
 
-// 使用一个立即执行函数表达式 (IIFE) 来创建作用域，避免污染全局命名空间
-(function(window) {
-    'use strict'; // 启用严格模式
+    const AppUtils = {};
 
-    const AppUtils = {}; // 创建一个命名空间对象
-
-    /**
-     * 显示一个简单的消息提示 (可以使用更复杂的库替代)
-     * @param {string} message - 要显示的消息
-     * @param {string} type - 消息类型 ('success', 'error', 'info', 'warning')
-     */
-    AppUtils.showMessage = function(message, type = 'info') {
+    AppUtils.showMessage = function (message, type = 'info') {
         console.log(`[${type.toUpperCase()}] ${message}`);
-        // 实际项目中，这里会替换为更友好的 UI 提示，例如 Toastr, SweetAlert 等
-        // alert(`[${type.toUpperCase()}] ${message}`); // 避免使用 alert
-        // 示例：创建一个临时 div 显示消息
         const messageDiv = document.createElement('div');
+        // ... (样式代码不变) ...
         messageDiv.style.position = 'fixed';
         messageDiv.style.top = '20px';
         messageDiv.style.left = '50%';
@@ -29,150 +23,117 @@
         messageDiv.style.zIndex = '10000';
         messageDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
         messageDiv.textContent = message;
-
         switch (type) {
             case 'success':
-                messageDiv.style.backgroundColor = '#4CAF50'; // 绿色
+                messageDiv.style.backgroundColor = '#4CAF50';
                 messageDiv.style.color = 'white';
                 break;
             case 'error':
-                messageDiv.style.backgroundColor = '#f44336'; // 红色
+                messageDiv.style.backgroundColor = '#f44336';
                 messageDiv.style.color = 'white';
                 break;
             case 'warning':
-                messageDiv.style.backgroundColor = '#ff9800'; // 橙色
+                messageDiv.style.backgroundColor = '#ff9800';
                 messageDiv.style.color = 'black';
                 break;
-            case 'info':
             default:
-                messageDiv.style.backgroundColor = '#2196F3'; // 蓝色
+                messageDiv.style.backgroundColor = '#2196F3';
                 messageDiv.style.color = 'white';
                 break;
         }
-
         document.body.appendChild(messageDiv);
-
-        // 3秒后自动移除
         setTimeout(() => {
             messageDiv.remove();
         }, 3000);
     };
 
-
-    /**
-     * 核心 AJAX 请求函数
-     * @param {string} url - 请求的 URL
-     * @param {string} method - HTTP 方法 (GET, POST, PUT, DELETE)
-     * @param {object} [data=null] - 发送的数据 (对于 POST, PUT)
-     * @param {object} [headers={}] - 自定义请求头
-     * @returns {Promise<object>} - 返回一个 Promise，解析为响应的 JSON 数据或在错误时拒绝
-     */
-    AppUtils.request = async function(url, method = 'GET', data = null, headers = {}) {
+    AppUtils.request = async function (url, method = 'GET', data = null, headers = {}) {
         const options = {
             method: method.toUpperCase(),
             headers: {
-                'Accept': 'application/json', // 期望接收 JSON
-                ...headers // 合并自定义头
+                'Accept': 'application/json',
+                ...headers
             },
         };
-
-        // 为 POST 和 PUT 请求添加 body 和 Content-Type
         if ((options.method === 'POST' || options.method === 'PUT') && data) {
             options.headers['Content-Type'] = 'application/json';
             options.body = JSON.stringify(data);
         }
-
-        console.debug(`[Request] ${options.method} ${url}`, data ? `Data: ${JSON.stringify(data)}` : ''); // 调试日志
-
+        console.debug(`[Request] ${options.method} ${url}`, data ? `Data: ${JSON.stringify(data)}` : '');
         try {
             const response = await fetch(url, options);
-
-            console.debug(`[Response] ${response.status} ${response.statusText} for ${url}`); // 调试日志
-
-            // 处理 HTTP 错误状态 (非 2xx)
+            console.debug(`[Response] ${response.status} ${response.statusText} for ${url}`);
             if (!response.ok) {
-                let errorData = { status: response.status, message: `HTTP error: ${response.statusText}` };
+                let errorData = {status: response.status, message: `HTTP error: ${response.statusText}`};
                 try {
-                    // 尝试解析错误响应体 (如果服务器返回了 JSON 错误信息)
                     const errorJson = await response.json();
-                    errorData.message = errorJson.message || errorData.message; // 使用服务器返回的消息
-                    errorData.details = errorJson; // 包含完整的错误详情
+                    errorData.message = errorJson.message || errorData.message;
+                    errorData.details = errorJson;
                     console.error(`Server error response for ${url}:`, errorJson);
                 } catch (e) {
-                    // 如果响应体不是 JSON 或解析失败，使用默认消息
                     console.error(`Could not parse error response body for ${url}. Status: ${response.status}`);
                 }
-                // 抛出包含状态和消息的错误对象
+                // *** 在抛出错误前显示消息 ***
+                AppUtils.showMessage(`请求失败: ${errorData.message} (状态码: ${response.status})`, 'error');
                 throw errorData;
             }
-
-            // 处理 204 No Content 响应 (例如 DELETE 成功)
-            if (response.status === 204) {
-                return null; // 没有内容可解析，返回 null
-            }
-
-            // 解析 JSON 响应体
+            if (response.status === 204) return null;
             return await response.json();
-
         } catch (error) {
             console.error(`[Fetch Error] ${method} ${url}:`, error);
-            // 如果是网络错误或上面抛出的 HTTP 错误，重新抛出给调用者处理
-            // 可以包装成更具体的错误类型
+            // 如果不是上面抛出的 HTTP 错误对象，则显示通用网络错误消息
+            if (!error.status) {
+                AppUtils.showMessage(`网络错误或请求无法完成: ${error.message || '请检查网络连接或联系管理员'}`, 'error');
+            }
             throw error;
         }
     };
 
     /**
-     * 发送 GET 请求的便捷函数
-     * @param {string} url - 请求的 URL (可以包含查询参数)
+     * 发送 GET 请求的便捷函数 (修正：处理查询参数)
+     * @param {string} baseUrl - 请求的基础 URL (不含查询参数)
+     * @param {object} [params=null] - 查询参数对象 {key: value, ...}
      * @param {object} [headers={}] - 自定义请求头
      * @returns {Promise<object>}
      */
-    AppUtils.get = function(url, headers = {}) {
+    AppUtils.get = function (baseUrl, params = null, headers = {}) {
+        let url = baseUrl;
+        if (params) {
+            // 使用 URLSearchParams 自动处理参数编码
+            const searchParams = new URLSearchParams();
+            for (const key in params) {
+                // 检查属性是否是对象自身的属性，并且值不是 null 或 undefined
+                if (Object.hasOwnProperty.call(params, key) && params[key] !== null && params[key] !== undefined) {
+                    const value = params[key];
+                    // 如果值是数组 (例如 tagIds)，则为每个元素添加一个参数
+                    if (Array.isArray(value)) {
+                        value.forEach(item => searchParams.append(key, item));
+                    } else {
+                        searchParams.append(key, value);
+                    }
+                }
+            }
+            const queryString = searchParams.toString();
+            if (queryString) {
+                url += (url.includes('?') ? '&' : '?') + queryString;
+            }
+        }
+        // 调用 request，不再传递 params，因为它们已在 URL 中
         return AppUtils.request(url, 'GET', null, headers);
     };
 
-    /**
-     * 发送 POST 请求的便捷函数
-     * @param {string} url - 请求的 URL
-     * @param {object} data - 要发送的 JSON 数据
-     * @param {object} [headers={}] - 自定义请求头
-     * @returns {Promise<object>}
-     */
-    AppUtils.post = function(url, data, headers = {}) {
+    AppUtils.post = function (url, data, headers = {}) {
         return AppUtils.request(url, 'POST', data, headers);
     };
-
-    /**
-     * 发送 PUT 请求的便捷函数
-     * @param {string} url - 请求的 URL
-     * @param {object} data - 要发送的 JSON 数据
-     * @param {object} [headers={}] - 自定义请求头
-     * @returns {Promise<object>}
-     */
-    AppUtils.put = function(url, data, headers = {}) {
+    AppUtils.put = function (url, data, headers = {}) {
         return AppUtils.request(url, 'PUT', data, headers);
     };
-
-    /**
-     * 发送 DELETE 请求的便捷函数
-     * @param {string} url - 请求的 URL
-     * @param {object} [headers={}] - 自定义请求头
-     * @returns {Promise<null>} - DELETE 成功通常返回 null (204 No Content)
-     */
-    AppUtils.delete = function(url, headers = {}) {
+    AppUtils.delete = function (url, headers = {}) {
         return AppUtils.request(url, 'DELETE', null, headers);
     };
-
-    /**
-     * 简单的防抖函数
-     * @param {Function} func - 要执行的函数
-     * @param {number} delay - 延迟时间 (毫秒)
-     * @returns {Function} - 包装后的防抖函数
-     */
-    AppUtils.debounce = function(func, delay) {
+    AppUtils.debounce = function (func, delay) {
         let timeoutId;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 func.apply(this, args);
@@ -180,15 +141,79 @@
         };
     };
 
+    AppUtils.showLoading = function (targetElement = document.body) {
+        if (!targetElement) return;
+        let overlay = targetElement.querySelector('.loading-overlay-unique-id');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'loading-overlay-unique-id';
+            overlay.style.position = (targetElement === document.body) ? 'fixed' : 'absolute';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.zIndex = '9998';
+            overlay.innerHTML = '<div class="loader"></div>';
+            if (targetElement !== document.body && getComputedStyle(targetElement).position === 'static') {
+                targetElement.style.position = 'relative';
+            }
+            targetElement.appendChild(overlay);
+            console.debug('Loading overlay shown on:', targetElement);
+        } else {
+            overlay.style.display = 'flex';
+            console.debug('Loading overlay reused on:', targetElement);
+        }
+    };
 
-    // 将 AppUtils 暴露到全局 window 对象
+    AppUtils.hideLoading = function (targetElement = document.body) {
+        if (!targetElement) return;
+        const overlay = targetElement.querySelector('.loading-overlay-unique-id');
+        if (overlay) {
+            console.log('hideLoading: Overlay found. Removing it.');
+            overlay.remove(); // 直接移除元素
+            console.debug('Loading overlay removed from:', targetElement);
+        } else {
+            console.warn('hideLoading: Overlay not found inside:', targetElement);
+        }
+    };
+
+    AppUtils.escapeHTML = function (str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+
+    AppUtils.formatDateIfPresent = function (dateInput, format = 'yyyy-MM-dd') {
+        if (!dateInput) return '';
+        try {
+            let date;
+            if (typeof dateInput === 'string' && dateInput.includes('T')) {
+                date = new Date(dateInput);
+            } else if (dateInput instanceof Date) {
+                date = dateInput;
+            } else if (typeof dateInput === 'number') {
+                date = new Date(dateInput);
+            } else if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+                return dateInput;
+            } else {
+                date = new Date(dateInput);
+            }
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            console.error("Error formatting date:", dateInput, e);
+            return '';
+        }
+    };
+
     window.AppUtils = AppUtils;
 
-})(window); // 传入 window 对象
-
-// * **说明:**
-//     * 使用 IIFE 创建了 `AppUtils` 命名空间。
-//     * `showMessage`: 提供一个简单的 UI 提示功能（实际项目应替换为 UI 库）。
-//     * `request`: 核心 AJAX 函数，使用 `fetch` API，处理请求头、请求体、JSON 解析和基本的 HTTP 错误。它返回一个 Promise。
-//     * `get`, `post`, `put`, `delete`: 对 `request` 的便捷封装。
-//     * `debounce`: 提供了一个简单的防抖函数，可用于处理频繁触发的事件（如输入框的 `input` 事
+})(window);

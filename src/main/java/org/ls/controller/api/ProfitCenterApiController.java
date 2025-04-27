@@ -1,4 +1,4 @@
-package org.ls.controller;
+package org.ls.controller.api;
 
 import org.ls.entity.ProfitCenter;
 import org.ls.service.ProfitCenterService;

@@ -76,34 +76,34 @@
         row.classList.add('editing-row');
 
         // ID (只读)
-        const cellId = row.insertCell(); cellId.classList.add('table-cell text-sm', 'font-medium');
+        const cellId = row.insertCell(); cellId.classList.add('table-cell', 'font-medium');
         cellId.textContent = isNew ? '(自动生成)' : initialData.id;
         const hiddenId = document.createElement('input'); hiddenId.type = 'hidden'; hiddenId.name = 'id';
         hiddenId.value = initialData.id || ''; cellId.appendChild(hiddenId);
 
         // 业务类别
-        const cellCategory = row.insertCell(); cellCategory.classList.add('table-cell text-sm');
+        const cellCategory = row.insertCell(); cellCategory.classList.add('table-cell');
         const inputCategory = document.createElement('input'); inputCategory.type = 'text'; inputCategory.name = 'businessCategory';
         inputCategory.value = initialData.businessCategory || ''; inputCategory.placeholder = '输入业务类别';
         inputCategory.classList.add('input-field', 'editing-cell'); inputCategory.required = true;
         cellCategory.appendChild(inputCategory);
 
         // 业务名称
-        const cellName = row.insertCell(); cellName.classList.add('table-cell text-sm');
+        const cellName = row.insertCell(); cellName.classList.add('table-cell');
         const inputName = document.createElement('input'); inputName.type = 'text'; inputName.name = 'businessName';
         inputName.value = initialData.businessName || ''; inputName.placeholder = '输入业务名称';
         inputName.classList.add('input-field', 'editing-cell'); inputName.required = true;
         cellName.appendChild(inputName);
 
         // 业务描述
-        const cellDesc = row.insertCell(); cellDesc.classList.add('table-cell text-sm');
+        const cellDesc = row.insertCell(); cellDesc.classList.add('table-cell');
         const inputDesc = document.createElement('textarea'); inputDesc.name = 'businessDescription';
         inputDesc.value = initialData.businessDescription || ''; inputDesc.placeholder = '输入详细描述';
         inputDesc.classList.add('input-field', 'editing-cell', 'h-10', 'text-sm'); inputDesc.rows = 1;
         cellDesc.appendChild(inputDesc);
 
         // 启用状态
-        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell text-sm');
+        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell');
         const selectEnabled = document.createElement('select'); selectEnabled.name = 'enabled';
         selectEnabled.classList.add('select-field', 'editing-cell');
         selectEnabled.innerHTML = `<option value="true" ${initialData.enabled !== false ? 'selected' : ''}>启用</option><option value="false" ${initialData.enabled === false ? 'selected' : ''}>停用</option>`;

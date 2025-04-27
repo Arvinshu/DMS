@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.ProjectMapper">
+
+    <resultMap id="BaseProjectResultMap" type="org.ls.entity.Project">
+        <id property="projectId" column="project_id"/>
+        <result property="projectName" column="project_name"/>
+        <result property="projectDescription" column="project_description"/>
+        <result property="businessTypeName" column="business_type_name"/>
+        <result property="profitCenterZone" column="profit_center_zone"/>
+        <result property="projectManagerEmployee" column="project_manager_employee"/>
+        <result property="tsBm" column="ts_bm"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="updatedBy" column="updated_by"/>
+    </resultMap>
+
+    <sql id="Base_Project_Column_List">
+        p.project_id, p.project_name, p.project_description, p.business_type_name, p.profit_center_zone,
+        p.project_manager_employee, p.ts_bm, p.created_at, p.updated_at, p.created_by, p.updated_by
+    </sql>
+
+    <insert id="insert" parameterType="org.ls.entity.Project" useGeneratedKeys="true" keyProperty="projectId">
+        INSERT INTO public.t_project
+        (project_name, project_description, business_type_name, profit_center_zone, project_manager_employee, ts_bm,
+         created_at, updated_at, created_by, updated_by)
+        VALUES (#{projectName}, #{projectDescription}, #{businessTypeName}, #{profitCenterZone},
+                #{projectManagerEmployee}, #{tsBm}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, #{createdBy}, #{updatedBy})
+    </insert>
+
+    <update id="updateById" parameterType="org.ls.entity.Project">
+        UPDATE public.t_project
+        <set>
+            <if test="projectName != null and projectName != ''">project_name = #{projectName},</if>
+            <if test="projectDescription != null">project_description = #{projectDescription},</if>
+            <if test="businessTypeName != null">business_type_name = #{businessTypeName},</if>
+            <if test="profitCenterZone != null">profit_center_zone = #{profitCenterZone},</if>
+            <if test="projectManagerEmployee != null">project_manager_employee = #{projectManagerEmployee},</if>
+            <if test="tsBm != null">ts_bm = #{tsBm},</if>
+            updated_at = CURRENT_TIMESTAMP,
+            <if test="updatedBy != null">updated_by = #{updatedBy}</if>
+        </set>
+        WHERE project_id = #{projectId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE
+        FROM public.t_project
+        WHERE project_id = #{projectId}
+    </delete>
+
+    <select id="findById" resultMap="BaseProjectResultMap">
+        SELECT
+        <include refid="Base_Project_Column_List">
+            <property name="alias" value="p"/>
+        </include>
+        FROM public.t_project p
+        WHERE p.project_id = #{projectId}
+    </select>
+
+    <insert id="insertProjectTags">
+        INSERT INTO public.t_project_project_tag (project_id, tag_id) VALUES
+        <foreach collection="tagIds" item="tagId" separator=",">(#{projectId}, #{tagId})</foreach>
+        <if test="tagIds == null or tagIds.isEmpty()">SELECT 1 WHERE FALSE</if>
+    </insert>
+
+    <delete id="deleteProjectTagsByProjectId">
+        DELETE
+        FROM public.t_project_project_tag
+        WHERE project_id = #{projectId}
+    </delete>
+
+    <select id="findProjectsByCriteria" resultMap="BaseProjectResultMap" parameterType="map">SELECT
+        <include refid="Base_Project_Column_List">
+            <property name="alias" value="p"/>
+        </include>
+        FROM public.t_project p
+        <where>
+            <if test="params.nameFilter != null and params.nameFilter != ''">
+                AND p.project_name ILIKE '%' || #{params.nameFilter} || '%'
+            </if>
+            <if test="params.businessTypeName != null and params.businessTypeName != ''">
+                AND p.business_type_name = #{params.businessTypeName}
+            </if>
+            <if test="params.profitCenterZone != null and params.profitCenterZone != ''">
+                AND p.profit_center_zone = #{params.profitCenterZone}
+            </if>
+            <if test="params.projectManager != null and params.projectManager != ''">
+                AND p.project_manager_employee = #{params.projectManager}
+            </if>
+            <if test="params.tsBm != null and params.tsBm != ''">
+                AND p.ts_bm = #{params.tsBm}
+            </if>
+            <if test="params.tagIds != null and !params.tagIds.isEmpty()">
+                AND p.project_id IN (
+                SELECT project_id FROM public.t_project_project_tag
+                WHERE tag_id IN
+                <foreach collection="params.tagIds" item="tagId" open="(" separator="," close=")">#{tagId}</foreach>
+                GROUP BY project_id HAVING COUNT(DISTINCT tag_id) = #{params.tagCount}
+                )
+            </if>
+        </where>
+        <choose>
+            <when test="params.sortBy != null and params.sortBy == 'name'">ORDER BY p.project_name ${params.sortOrder}
+            </when>
+            <when test="params.sortBy != null and params.sortBy == 'createdAt'">ORDER BY p.created_at
+                ${params.sortOrder}
+            </when>
+            <otherwise>ORDER BY p.created_at DESC</otherwise>
+        </choose>
+        LIMIT #{params.limit} OFFSET #{params.offset}
+    </select>
+
+    <select id="countProjectsByCriteria" resultType="int" parameterType="map">
+        SELECT COUNT(DISTINCT p.project_id)
+        FROM public.t_project p
+        <if test="params.tagIds != null and !params.tagIds.isEmpty()">
+            LEFT JOIN public.t_project_project_tag ppt ON p.project_id = ppt.project_id
+        </if>
+        <where>
+            <if test="params.nameFilter != null and params.nameFilter != ''">AND p.project_name ILIKE '%' ||
+                #{params.nameFilter} || '%'
+            </if>
+            <if test="params.businessTypeName != null and params.businessTypeName != ''">AND p.business_type_name =
+                #{params.businessTypeName}
+            </if>
+            <if test="params.profitCenterZone != null and params.profitCenterZone != ''">AND p.profit_center_zone =
+                #{params.profitCenterZone}
+            </if>
+            <if test="params.projectManager != null and params.projectManager != ''">AND p.project_manager_employee =
+                #{params.projectManager}
+            </if>
+            <if test="params.tsBm != null and params.tsBm != ''">AND p.ts_bm = #{params.tsBm}</if>
+            <if test="params.tagIds != null and !params.tagIds.isEmpty()">
+                AND p.project_id IN (
+                SELECT project_id FROM public.t_project_project_tag
+                WHERE tag_id IN
+                <foreach collection="params.tagIds" item="tagId" open="(" separator="," close=")">#{tagId}</foreach>
+                GROUP BY project_id HAVING COUNT(DISTINCT tag_id) = #{params.tagCount}
+                )
+            </if>
+        </where>
+    </select>
+
+    <select id="countTasksByProjectId" resultType="int">
+        SELECT COUNT(*)
+        FROM public.t_task
+        WHERE project_id = #{projectId}
+    </select>
+
+</mapper>

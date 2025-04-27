@@ -1,0 +1,628 @@
+/**
+ * 文件路径: src/main/resources/static/css/project.css
+ * 开发时间: 2025-04-25 (更新)
+ * 作者: Gemini (更新者)
+ * 代码用途: 项目管理模块专属样式。
+ * 更新内容: 移除冲突的 .task-actions 绝对定位样式。
+ */
+
+/* --- 页面布局 (内嵌侧边栏) --- */
+.sub-nav-container {
+    width: 180px;
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    padding: 1rem;
+    height: calc(100vh - 4rem);
+    overflow-y: auto;
+    position: sticky;
+    top: 4rem;
+}
+
+.sub-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sub-nav li {
+    margin-bottom: 0.5rem;
+}
+
+.sub-nav a {
+    display: block;
+    padding: 0.6rem 1rem;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9rem;
+    border-left: 3px solid transparent;
+    white-space: nowrap;
+}
+
+.sub-nav a:hover {
+    background-color: #e9ecef;
+    color: #0056b3;
+}
+
+.sub-nav a.active {
+    background-color: #e7f1ff;
+    color: #0056b3;
+    font-weight: 600;
+    border-left-color: #0056b3;
+}
+
+.content-area {
+    flex-grow: 1;
+    height: calc(100vh - 4rem);
+    overflow-y: auto;
+}
+
+/* --- 视图容器和视图 --- */
+.view-container { /* ... */
+}
+
+.view { /* ... */
+}
+
+.view.active { /* ... */
+}
+
+/* --- 搜索栏 --- */
+#project-search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#project-search-bar .form-input,
+#project-search-bar .form-select,
+#project-search-bar .form-multiselect {
+    min-width: 150px;
+    flex: 1 1 150px;
+    font-size: 0.875rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+#project-search-bar .form-multiselect {
+    height: auto;
+    min-height: calc(1.5em + 0.8rem + 2px);
+    padding: 0.4rem 0.75rem;
+}
+
+/* --- 项目列表表格 --- */
+#project-list-container {
+    margin-top: 1rem;
+}
+
+.data-table {
+    border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.data-table th {
+    font-weight: 600;
+    white-space: nowrap;
+    color: #6b7280;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.toggle-tasks-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: #6c757d;
+}
+
+.toggle-tasks-btn i {
+    transition: transform 0.2s ease-in-out;
+    width: 0.8rem;
+    height: 0.8rem;
+    display: inline-block;
+}
+
+.toggle-tasks-btn i::before {
+    content: '\f054';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+.toggle-tasks-btn i.icon-chevron-down::before {
+    content: '\f078';
+}
+
+.tag {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    background-color: #6c757d;
+    margin-right: 0.3em;
+    margin-bottom: 0.3em;
+}
+
+.tag.core {
+    background-color: #dc3545;
+}
+
+.tag.web {
+    background-color: #0d6efd;
+}
+
+.tag.internal {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.status {
+    padding: 0.2em 0.5em;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.status-todo {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.status-inprogress {
+    background-color: #cfe2ff;
+    color: #0a58ca;
+}
+
+.status-completed {
+    background-color: #d1e7dd;
+    color: #146c43;
+}
+
+.status-onhold {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-cancelled {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.status-unknown {
+    background-color: #adb5bd;
+    color: #fff;
+}
+
+.progress-bar {
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+    height: 0.6rem;
+    overflow: hidden;
+    width: 80px;
+    margin: 0 auto;
+}
+
+.progress-bar div {
+    background-color: #0d6efd;
+    height: 100%;
+    transition: width 0.3s ease-in-out;
+}
+
+.progress-bar div[style*="width: 100%"] {
+    background-color: #198754;
+}
+
+.progress-bar div[style*="width: 0%"] {
+    background-color: #6c757d;
+}
+
+/* --- 任务详情行 --- */
+.task-details-row td {
+    padding: 0;
+    border-top: 2px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6;
+    background-color: #f1f5f9;
+}
+
+.task-container {
+    padding: 1rem 1.5rem;
+}
+
+.task-container h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.task-stages-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.task-stage-group {
+    flex: 1 1 300px;
+    min-width: 250px;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 0.8rem;
+    background-color: #fff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.task-stage-group h5 {
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 0.4rem;
+}
+
+.task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.task-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    background-color: #fff;
+    transition: box-shadow 0.2s ease;
+}
+
+.task-item:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 任务项内部布局 */
+.task-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+}
+
+.task-name {
+    font-weight: 600;
+    color: #1e293b;
+    flex-grow: 1;
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.task-priority {
+    font-size: 0.7rem;
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.priority-high {
+    background-color: #dc2626;
+}
+
+.priority-medium {
+    background-color: #f59e0b;
+    color: #fff;
+}
+
+.priority-low {
+    background-color: #64748b;
+}
+
+.task-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.task-meta span:not(.task-actions-inline) {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+.task-meta i {
+    margin-right: 0.3em;
+    width: 0.8em;
+    height: 0.8em;
+}
+
+.task-description-meta {
+    font-size: 0.85rem;
+    color: #475569;
+    flex-basis: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+    margin-top: 0.2rem;
+}
+
+/* *** 修改: 移除旧的 .task-actions 绝对定位样式 *** */
+/*
+.task-actions {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.task-item:hover .task-actions {
+    opacity: 1;
+}
+.task-actions .btn-icon { ... }
+.task-actions .btn-icon:hover { ... }
+*/
+
+/* 行内任务操作按钮样式 */
+.task-actions-inline {
+    display: inline-flex;
+    gap: 0.5rem;
+    margin-left: auto;
+    align-items: center;
+}
+
+.task-actions-inline .btn-icon {
+    padding: 0.2rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center; /* 让图标和文字垂直居中 */
+}
+
+.task-actions-inline .btn-icon:hover {
+    color: #1e293b;
+}
+
+.task-actions-inline .btn-icon .btn-text {
+    margin-left: 0.25rem; /* 图标和文字间距 */
+    font-size: 0.8rem; /* 按钮文字大小 */
+}
+
+/* 如果图标库未加载，可以取消注释下面这行来隐藏图标占位符 */
+/* .task-actions-inline .btn-icon i { display: none; } */
+
+
+.task-stage-group .add-task-to-stage-btn {
+    margin-top: 0.5rem;
+}
+
+/* 添加/编辑任务表单 */
+.task-item.editing-row {
+    background-color: #fefce8;
+    border-color: #fde68a;
+}
+
+.task-form {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.task-form .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.task-form label {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+    color: #334155;
+    font-weight: 500;
+}
+
+.task-form .form-input,
+.task-form .form-select,
+.task-form .form-textarea {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+}
+
+/* 添加边框和圆角 */
+.task-form .form-textarea {
+    min-height: 50px;
+    resize: vertical;
+}
+
+.task-form .form-actions {
+    grid-column: 1 / -1;
+    text-align: right;
+    margin-top: 0.5rem;
+}
+
+/* 确保这个样式存在且正确 */
+.task-form .task-dates-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.task-form .task-dates-group input {
+    flex: 1;
+}
+
+
+/* --- 行内编辑样式 (通用) --- */
+.editable-row input[type="text"],
+.editable-row input[type="number"],
+.editable-row input[type="date"],
+.editable-row select,
+.editable-row textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+}
+
+.editable-row textarea {
+    min-height: 40px;
+    resize: vertical;
+}
+
+.editable-row select[multiple] {
+    height: auto;
+    min-height: 60px;
+}
+
+#add-project-row td {
+    background-color: #f0f9ff;
+    border-top: 1px dashed #bae6fd;
+    border-bottom: 1px dashed #bae6fd;
+}
+
+/* --- 加载和错误状态 --- */
+.loading, .error-message {
+    text-align: center;
+    padding: 1rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.error-message {
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-overlay-unique-id { /* ... */
+}
+
+/* --- 分页容器 --- */
+.pagination-container {
+    margin-top: 1.5rem;
+    padding-bottom: 1rem;
+}
+
+/* --- 响应式调整 --- */
+@media (max-width: 768px) {
+    .sub-nav-container {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        margin-right: 0;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        height: auto;
+        overflow-y: visible;
+        position: static;
+    }
+
+    .sub-nav {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    .sub-nav li {
+        margin-bottom: 0;
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .sub-nav a {
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.5rem 0.8rem;
+    }
+
+    .sub-nav a.active {
+        border-left: none;
+        border-bottom-color: #0056b3;
+        background-color: transparent;
+    }
+
+    .content-area {
+        padding: 0.5rem;
+        height: auto;
+        overflow-y: visible;
+    }
+
+    #project-search-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #project-search-bar .form-input, #project-search-bar .form-select, #project-search-bar .form-multiselect {
+        min-width: 100%;
+        flex-basis: auto;
+    }
+
+    #project-table th:nth-child(4), #project-table td:nth-child(4), #project-table th:nth-child(5), #project-table td:nth-child(5), #project-table th:nth-child(6), #project-table td:nth-child(6) {
+        display: none;
+    }
+
+    .task-stages-wrapper {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .task-stage-group {
+        flex-basis: auto;
+    }
+
+    .task-meta {
+        gap: 0.5rem;
+    }
+
+    .task-actions-inline {
+        margin-left: 0; /* 小屏幕上靠左 */
+    }
+}

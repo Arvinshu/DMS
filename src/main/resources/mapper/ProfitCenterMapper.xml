@@ -70,6 +70,24 @@
         WHERE zone = #{zone,jdbcType=VARCHAR}
     </select>
 
+
+    <select id="findDistinctAll" resultMap="BaseResultMap" parameterType="map">
+        SELECT <include refid="Base_Column_List" />
+        FROM (
+        SELECT DISTINCT ON (custom_zone_remark)
+        <include refid="Base_Column_List" />
+        FROM public.t_profit_center
+        <include refid="Where_Clause" />
+        ORDER BY custom_zone_remark, updated_at DESC  -- 按需调整排序条件（如保留最新记录）
+        ) AS subquery
+        ORDER BY zone ASC;
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+
+
     <select id="findAll" resultMap="BaseResultMap" parameterType="map">
         SELECT <include refid="Base_Column_List" />
         FROM public.t_profit_center

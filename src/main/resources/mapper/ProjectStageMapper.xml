@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.ls.mapper.ProjectStageMapper">
+
+    <resultMap id="ProjectStageResultMap" type="org.ls.entity.ProjectStage">
+        <id property="stageId" column="stage_id"/>
+        <result property="stageOrder" column="stage_order"/>
+        <result property="stageName" column="stage_name"/>
+        <result property="stageDescription" column="stage_description"/>
+        <result property="isEnabled" column="is_enabled"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        stage_id, stage_order, stage_name, stage_description, is_enabled, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="org.ls.entity.ProjectStage" useGeneratedKeys="true" keyProperty="stageId">
+        INSERT INTO public.t_project_stage (stage_order, stage_name, stage_description, is_enabled, created_at, updated_at)
+        VALUES (#{stageOrder}, #{stageName}, #{stageDescription}, #{isEnabled}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateById" parameterType="org.ls.entity.ProjectStage">
+        UPDATE public.t_project_stage
+        <set>
+            <if test="stageOrder != null">
+                stage_order = #{stageOrder},
+            </if>
+            <if test="stageName != null and stageName != ''">
+                stage_name = #{stageName},
+            </if>
+            <if test="stageDescription != null">
+                stage_description = #{stageDescription},
+            </if>
+            <if test="isEnabled != null">
+                is_enabled = #{isEnabled},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE stage_id = #{stageId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM public.t_project_stage
+        WHERE stage_id = #{stageId}
+    </delete>
+
+    <select id="findById" resultMap="ProjectStageResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_stage
+        WHERE stage_id = #{stageId}
+    </select>
+
+    <select id="findAll" resultMap="ProjectStageResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_stage
+        <where>
+            <if test="nameFilter != null and nameFilter != ''">
+                AND stage_name ILIKE '%' || #{nameFilter} || '%'
+            </if>
+        </where>
+        ORDER BY stage_order ASC, stage_id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM public.t_project_stage
+        <where>
+            <if test="nameFilter != null and nameFilter != ''">
+                AND stage_name ILIKE '%' || #{nameFilter} || '%'
+            </if>
+        </where>
+    </select>
+
+    <select id="findAllEnabledOrdered" resultMap="ProjectStageResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_stage
+        WHERE is_enabled = TRUE
+        ORDER BY stage_order ASC, stage_id ASC
+    </select>
+
+</mapper>

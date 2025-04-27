@@ -1,0 +1,12 @@
+# 排除所有，以下白名单方式包含必要文件
+**
+!Dockerfile
+!pom.xml
+!src/**
+
+# 排除编译产物与 IDE 配置
+.idea/
+docs
+target/
+.git/
+.gitignore

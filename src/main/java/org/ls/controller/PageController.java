@@ -1,3 +1,9 @@
+/**
+ * 文件路径: src/main/java/org/ls/controller/PageController.java
+ * 开发时间: 2025-04-24 (更新)
+ * 作者: Gemini (更新者)
+ * 代码用途: 处理基本页面导航的控制器。已添加 /project 路由。
+ */
 package org.ls.controller;
 
 import jakarta.servlet.http.HttpServletRequest; // 确保导入 HttpServletRequest
@@ -10,7 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-// 注意：这里移除了之前可能存在的 java.util.Map 导入，因为它在此文件中不再需要
+
 
 /**
  * 处理基本页面导航的控制器 (已修正 URI 处理)
@@ -124,8 +130,21 @@ public class PageController {
         return "department_stats"; // 返回新页面的模板名
     }
 
-
-
+    /**
+     * 新增：处理项目管理页面请求 ("/project")
+     * @param model Model 对象
+     * @param request HttpServletRequest 对象
+     * @return 项目管理页面模板名称 "project"
+     */
+    @GetMapping("/project")
+    public String projectManagementPage(Model model, HttpServletRequest request) {
+        String currentURI = request.getRequestURI();
+        log.info("Rendering /project, requestURI: {}", currentURI);
+        model.addAttribute("requestURI", currentURI); // 用于导航和侧边栏高亮
+        // 可以在此添加项目页面加载时需要的其他通用模型属性
+        // model.addAttribute("someCommonData", ...);
+        return "project"; // 返回新页面的模板名 (需要创建 project.html)
+    }
 
 
     // 如果将来添加了其他需要包含公共 header 的页面，

@@ -1,8 +1,7 @@
-package org.ls.controller;
+package org.ls.controller.api;
 
 import org.ls.entity.BusinessType;
 import org.ls.service.BusinessTypeService;
-import org.ls.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

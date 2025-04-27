@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目管理 - 部门管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
+    <link rel="stylesheet" th:href="@{/css/project.css}">
+    <link rel="icon" th:href="@{/favicon.ico}" type="image/x-icon">
+</head>
+<body class="bg-gray-100 font-sans">
+<div class="flex flex-col min-h-screen">
+
+    <header th:replace="~{fragments/header :: navbar}"></header>
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="sub-nav-container flex-shrink-0 overflow-y-auto">
+            <nav>
+                <ul class="sub-nav">
+                    <li><a href="#project-management-view" data-view="project_management" class="active">项目管理</a>
+                    </li>
+                    <li><a href="#project-statistics-view" data-view="project_statistics">项目工作概览</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="content-area flex-1 overflow-y-auto p-6"><h1>项目管理</h1>
+
+            <div class="view-container">
+
+                <div id="project-management-view" class="view active bg-white p-4 rounded-lg shadow"><h2
+                        class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目列表与任务</h2>
+
+                    <div id="project-search-bar" class="search-bar controls mb-4"><input type="text"
+                                                                                         id="search-project-name"
+                                                                                         placeholder="项目名称..."
+                                                                                         class="form-input">
+                        <select id="search-project-tags" multiple placeholder="选择标签..." class="form-multiselect">
+                        </select>
+                        <select id="search-business-type" class="form-select">
+                            <option value="">所有业务类型</option>
+                        </select>
+                        <select id="search-profit-center" class="form-select">
+                            <option value="">所有利润中心</option>
+                        </select>
+                        <select id="search-project-stage" class="form-select">
+                            <option value="">所有当前阶段</option>
+                        </select>
+                        <select id="search-project-status" class="form-select">
+                            <option value="">所有状态</option>
+                            <option value="待办">待办</option>
+                            <option value="进行中">进行中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="已暂停">已暂停</option>
+                            <option value="已取消">已取消</option>
+                        </select>
+                        <button id="search-project-btn" class="btn">搜索</button>
+                        <button id="add-project-btn" class="btn btn-primary">新增项目</button>
+                    </div>
+
+                    <div id="project-list-container" class="table-container overflow-x-auto">
+                        <table id="project-table" class="data-table min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 3%;"></th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    项目名称
+                                </th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 10%;">创建时间
+                                </th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 15%;">标签
+                                </th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 10%;">业务类型
+                                </th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 10%;">利润中心
+                                </th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 10%;">当前阶段
+                                </th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 8%;">状态
+                                </th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 10%;">概览/进度
+                                </th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    style="width: 8%;">操作
+                                </th>
+                            </tr>
+                            <tr id="add-project-row" class="editable-row" style="display: none;">
+                                <td class="text-center"><i class="icon-add"></i></td>
+                                <td><input type="text" name="projectName" placeholder="项目名称*" required
+                                           class="form-input text-sm"></td>
+                                <td><input type="text" name="createdAt" class="form-input text-sm flatpickr-input"
+                                           placeholder="创建日期*"></td>
+                                <td><select name="tagIds" multiple class="form-multiselect text-sm"
+                                            placeholder="选择标签..."></select></td>
+                                <td><select name="businessTypeName" class="form-select text-sm">
+                                    <option value="">选择业务类型</option>
+                                </select></td>
+                                <td><select name="profitCenterZone" class="form-select text-sm">
+                                    <option value="">选择利润中心</option>
+                                </select></td>
+                                <td class="text-gray-500 text-sm">自动计算</td>
+                                <td class="text-gray-500 text-sm text-center">自动计算</td>
+                                <td class="text-gray-500 text-sm text-center">自动计算</td>
+                                <td class="text-center">
+                                    <button class="btn btn-xs btn-save save-new-project-btn">保存</button>
+                                    <button class="btn btn-xs btn-cancel cancel-add-project-btn">取消</button>
+                                </td>
+                            </tr>
+                            </thead>
+                            <tbody id="project-table-body" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="project-pagination" class="pagination-container mt-4">
+                        <div th:replace="~{fragments/pagination :: pagination}"></div>
+                    </div>
+                </div>
+
+                <div id="project-statistics-view" class="view hidden bg-white p-4 rounded-lg shadow"><h2
+                        class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目工作概览</h2>
+                    <p class="text-gray-600">此部分功能暂未开放。</p>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+<div th:replace="~{fragments/scripts :: commonScripts}"></div>
+<script th:src="@{/js/lib/flatpickr.min.js}"></script>
+<script th:src="@{/js/lib/zh.js}"></script>
+<script th:src="@{/js/project/project_api.js}"></script>
+<script th:src="@{/js/project/project_list.js}"></script>
+<script th:src="@{/js/project/project_crud.js}"></script>
+<script th:src="@{/js/project/project_tasks.js}"></script>
+<script th:src="@{/js/project/project_main.js}"></script>
+</body>
+</html>
+

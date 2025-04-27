@@ -145,7 +145,7 @@
         row.classList.add('editing-row');
 
         // ID
-        const cellId = row.insertCell(); cellId.classList.add('table-cell text-sm');
+        const cellId = row.insertCell(); cellId.classList.add('table-cell');
         const inputId = document.createElement('input'); inputId.type = 'number'; inputId.name = 'id';
         inputId.value = initialData.id || ''; inputId.classList.add('input-field', 'w-20', 'editing-cell');
         inputId.required = true;
@@ -153,14 +153,14 @@
         cellId.appendChild(inputId);
 
         // 部门名称 (变为可编辑)
-        const cellDepName = row.insertCell(); cellDepName.classList.add('table-cell text-sm');
+        const cellDepName = row.insertCell(); cellDepName.classList.add('table-cell');
         const inputDepName = document.createElement('input'); inputDepName.type = 'text'; inputDepName.name = 'depName';
         inputDepName.value = initialData.depName || ''; inputDepName.placeholder = '输入部门名称';
         inputDepName.classList.add('input-field', 'editing-cell'); inputDepName.required = true;
         cellDepName.appendChild(inputDepName);
 
         // 部门层级 (改为下拉框)
-        const cellLevel = row.insertCell(); cellLevel.classList.add('table-cell text-sm');
+        const cellLevel = row.insertCell(); cellLevel.classList.add('table-cell');
         const selectLevel = document.createElement('select'); selectLevel.name = 'depLevel';
         selectLevel.classList.add('select-field', 'editing-cell'); selectLevel.required = true;
         const levels = ['一级部门', '二级部门', '三级部门'];
@@ -184,7 +184,7 @@
         cellLevel.appendChild(selectLevel);
 
         // 负责人 ID (改为下拉框)
-        const cellManager = row.insertCell(); cellManager.classList.add('table-cell text-sm');
+        const cellManager = row.insertCell(); cellManager.classList.add('table-cell');
         const selectManager = document.createElement('select'); selectManager.name = 'managerId';
         selectManager.classList.add('select-field', 'editing-cell'); // 允许为空，所以非 required
         cellManager.appendChild(selectManager);
@@ -192,21 +192,21 @@
         await loadEmployeeOptions(selectManager, initialData.managerId, true, '-- 无负责人 --');
 
         // 副经理 ID (改为下拉框)
-        const cellAssistant = row.insertCell(); cellAssistant.classList.add('table-cell text-sm');
+        const cellAssistant = row.insertCell(); cellAssistant.classList.add('table-cell');
         const selectAssistant = document.createElement('select'); selectAssistant.name = 'assistantManagerId';
         selectAssistant.classList.add('select-field', 'editing-cell'); // 允许为空
         cellAssistant.appendChild(selectAssistant);
         await loadEmployeeOptions(selectAssistant, initialData.assistantManagerId, true, '-- 无副经理 --');
 
         // 状态 (Select)
-        const cellActive = row.insertCell(); cellActive.classList.add('table-cell text-sm');
+        const cellActive = row.insertCell(); cellActive.classList.add('table-cell');
         const selectActive = document.createElement('select'); selectActive.name = 'active';
         selectActive.classList.add('select-field', 'editing-cell');
         selectActive.innerHTML = `<option value="true" ${initialData.active !== false ? 'selected' : ''}>启用</option><option value="false" ${initialData.active === false ? 'selected' : ''}>停用</option>`;
         cellActive.appendChild(selectActive);
 
         // 参与统计 (Select)
-        const cellStats = row.insertCell(); cellStats.classList.add('table-cell text-sm');
+        const cellStats = row.insertCell(); cellStats.classList.add('table-cell');
         const selectStats = document.createElement('select'); selectStats.name = 'statistics';
         selectStats.classList.add('select-field', 'editing-cell');
         selectStats.innerHTML = `<option value="true" ${initialData.statistics !== false ? 'selected' : ''}>是</option><option value="false" ${initialData.statistics === false ? 'selected' : ''}>否</option>`;

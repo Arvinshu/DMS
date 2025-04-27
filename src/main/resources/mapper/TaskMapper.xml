@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.TaskMapper">
+
+    <resultMap id="TaskResultMap" type="org.ls.entity.Task">
+        <id property="taskId" column="task_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="taskName" column="task_name"/>
+        <result property="taskDescription" column="task_description"/>
+        <result property="priority" column="priority"/>
+        <result property="assigneeEmployee" column="assignee_employee"/>
+        <result property="startDate" column="start_date"/>
+        <result property="dueDate" column="due_date"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="taskStatus" column="task_status"/>
+        <result property="attachments" column="attachments"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="Base_Task_Column_List">
+        task_id, project_id, task_name, task_description, priority, assignee_employee,
+        start_date, due_date, stage_id, task_status, attachments, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="org.ls.entity.Task" useGeneratedKeys="true" keyProperty="taskId">
+        INSERT INTO public.t_task
+        (project_id, task_name, task_description, priority, assignee_employee, start_date, due_date, stage_id, task_status, attachments, created_at, updated_at)
+        VALUES
+            (#{projectId}, #{taskName}, #{taskDescription}, #{priority}, #{assigneeEmployee}, #{startDate}, #{dueDate}, #{stageId}, #{taskStatus}, #{attachments}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateById" parameterType="org.ls.entity.Task">
+        UPDATE public.t_task
+        <set>
+            <if test="taskName != null and taskName != ''">
+                task_name = #{taskName},
+            </if>
+            <if test="taskDescription != null">
+                task_description = #{taskDescription},
+            </if>
+            <if test="priority != null">
+                priority = #{priority},
+            </if>
+            <if test="assigneeEmployee != null">
+                assignee_employee = #{assigneeEmployee},
+            </if>
+            <if test="startDate != null">
+                start_date = #{startDate},
+            </if>
+            <if test="dueDate != null">
+                due_date = #{dueDate},
+            </if>
+            <if test="stageId != null">
+                stage_id = #{stageId},
+            </if>
+            <if test="taskStatus != null and taskStatus != ''">
+                task_status = #{taskStatus},
+            </if>
+            <if test="attachments != null">
+                attachments = #{attachments},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE task_id = #{taskId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM public.t_task WHERE task_id = #{taskId}
+    </delete>
+
+    <select id="findById" resultMap="TaskResultMap">
+        SELECT <include refid="Base_Task_Column_List" />
+        FROM public.t_task
+        WHERE task_id = #{taskId}
+    </select>
+
+    <select id="findTasksByProjectId" resultMap="TaskResultMap">
+        SELECT t.*
+        FROM public.t_task t
+                 JOIN public.t_project_stage ps ON t.stage_id = ps.stage_id
+        WHERE t.project_id = #{projectId}
+        ORDER BY ps.stage_order ASC, t.created_at ASC -- 按阶段排序号升序，然后按任务创建时间升序
+    </select>
+
+    <select id="findLatestTaskInfoByProjectId" resultType="map">
+        SELECT
+            t.task_status,
+            t.stage_id
+        FROM public.t_task t
+        WHERE t.project_id = #{projectId}
+        ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC -- 按更新时间倒序，如果更新时间为空则按创建时间
+        LIMIT 1 -- 只取最新的一条
+    </select>
+
+    <select id="countTasksByProjectId" resultType="int">
+        SELECT COUNT(*)
+        FROM public.t_task
+        WHERE project_id = #{projectId}
+    </select>
+
+</mapper>

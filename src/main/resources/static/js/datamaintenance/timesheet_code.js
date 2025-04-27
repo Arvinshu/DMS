@@ -138,7 +138,7 @@
         row.classList.add('editing-row');
 
         // 工时编码 (主键)
-        const cellTsBm = row.insertCell(); cellTsBm.classList.add('table-cell text-sm');
+        const cellTsBm = row.insertCell(); cellTsBm.classList.add('table-cell');
         const inputTsBm = document.createElement('input'); inputTsBm.type = 'text'; inputTsBm.name = 'tsBm';
         inputTsBm.value = initialData.tsBm || ''; inputTsBm.placeholder = '输入工时编码 (主键)';
         inputTsBm.classList.add('input-field', 'editing-cell'); inputTsBm.required = true;
@@ -146,7 +146,7 @@
         cellTsBm.appendChild(inputTsBm);
 
         // 工时名称 (改为可编辑)
-        const cellTsName = row.insertCell(); cellTsName.classList.add('table-cell text-sm');
+        const cellTsName = row.insertCell(); cellTsName.classList.add('table-cell');
         const inputTsName = document.createElement('input'); inputTsName.type = 'text'; inputTsName.name = 'tsName';
         inputTsName.value = initialData.tsName || ''; inputTsName.placeholder = '输入工时名称';
         inputTsName.classList.add('input-field', 'editing-cell');
@@ -154,28 +154,28 @@
         cellTsName.appendChild(inputTsName);
 
         // 子工时编码 (改为可编辑)
-        const cellSTsBm = row.insertCell(); cellSTsBm.classList.add('table-cell text-sm');
+        const cellSTsBm = row.insertCell(); cellSTsBm.classList.add('table-cell');
         const inputSTsBm = document.createElement('input'); inputSTsBm.type = 'text'; inputSTsBm.name = 'sTsBm';
         inputSTsBm.value = initialData.sTsBm || ''; inputSTsBm.placeholder = '输入子编码(可选)';
         inputSTsBm.classList.add('input-field', 'editing-cell');
         cellSTsBm.appendChild(inputSTsBm);
 
         // 工时信息 (自定义)
-        const cellCustomName = row.insertCell(); cellCustomName.classList.add('table-cell text-sm');
+        const cellCustomName = row.insertCell(); cellCustomName.classList.add('table-cell');
         const inputCustomName = document.createElement('input'); inputCustomName.type = 'text'; inputCustomName.name = 'customProjectName';
         inputCustomName.value = initialData.customProjectName || ''; inputCustomName.placeholder = '部门维护的项目名称';
         inputCustomName.classList.add('input-field', 'editing-cell');
         cellCustomName.appendChild(inputCustomName);
 
         // 是否项目工时
-        const cellIsProject = row.insertCell(); cellIsProject.classList.add('table-cell text-sm');
+        const cellIsProject = row.insertCell(); cellIsProject.classList.add('table-cell');
         const selectIsProject = document.createElement('select'); selectIsProject.name = 'projectTimesheet';
         selectIsProject.classList.add('select-field', 'editing-cell');
         selectIsProject.innerHTML = `<option value="true" ${initialData.projectTimesheet !== false ? 'selected' : ''}>是</option><option value="false" ${initialData.projectTimesheet === false ? 'selected' : ''}>否</option>`;
         cellIsProject.appendChild(selectIsProject);
 
         // 项目业务类型 (下拉)
-        const cellBusinessType = row.insertCell(); cellBusinessType.classList.add('table-cell text-sm');
+        const cellBusinessType = row.insertCell(); cellBusinessType.classList.add('table-cell');
         const selectBusinessType = document.createElement('select'); selectBusinessType.name = 'projectBusinessType';
         selectBusinessType.classList.add('select-field', 'editing-cell');
         cellBusinessType.appendChild(selectBusinessType);
@@ -183,7 +183,7 @@
         await loadBusinessTypeOptions(selectBusinessType, initialData.projectBusinessType, true, '-- 选择业务类型 (可选) --');
 
         // 启用状态
-        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell text-sm');
+        const cellEnabled = row.insertCell(); cellEnabled.classList.add('table-cell');
         const selectEnabled = document.createElement('select'); selectEnabled.name = 'enabled';
         selectEnabled.classList.add('select-field', 'editing-cell');
         selectEnabled.innerHTML = `<option value="true" ${initialData.enabled !== false ? 'selected' : ''}>启用</option><option value="false" ${initialData.enabled === false ? 'selected' : ''}>停用</option>`;

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.ProjectTagMapper">
+
+    <resultMap id="ProjectTagResultMap" type="org.ls.entity.ProjectTag">
+        <id property="tagId" column="tag_id"/>
+        <result property="tagName" column="tag_name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        tag_id, tag_name, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="org.ls.entity.ProjectTag" useGeneratedKeys="true" keyProperty="tagId">
+        INSERT INTO public.t_project_tag (tag_name, created_at, updated_at)
+        VALUES (#{tagName}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateById" parameterType="org.ls.entity.ProjectTag">
+        UPDATE public.t_project_tag
+        <set>
+            <if test="tagName != null and tagName != ''">
+                tag_name = #{tagName},
+            </if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE tag_id = #{tagId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM public.t_project_tag
+        WHERE tag_id = #{tagId}
+    </delete>
+
+    <select id="findById" resultMap="ProjectTagResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_tag
+        WHERE tag_id = #{tagId}
+    </select>
+
+    <select id="findAll" resultMap="ProjectTagResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_tag
+        <where>
+            <if test="nameFilter != null and nameFilter != ''">
+                AND tag_name ILIKE '%' || #{nameFilter} || '%'
+            </if>
+        </where>
+        ORDER BY tag_id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM public.t_project_tag
+        <where>
+            <if test="nameFilter != null and nameFilter != ''">
+                AND tag_name ILIKE '%' || #{nameFilter} || '%'
+            </if>
+        </where>
+    </select>
+
+    <select id="findAllEnabledTags" resultMap="ProjectTagResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM public.t_project_tag
+        ORDER BY tag_name ASC -- 按名称排序方便前端展示
+    </select>
+
+    <select id="findTagsByProjectId" resultMap="ProjectTagResultMap">
+        SELECT pt.tag_id, pt.tag_name, pt.created_at, pt.updated_at
+        FROM public.t_project_tag pt
+                 JOIN public.t_project_project_tag ppt ON pt.tag_id = ppt.tag_id
+        WHERE ppt.project_id = #{projectId}
+        ORDER BY pt.tag_name ASC
+    </select>
+
+</mapper>

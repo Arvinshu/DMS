@@ -139,7 +139,7 @@
         row.classList.add('editing-row');
 
         // 员工信息 (主键)
-        const cellEmployee = row.insertCell(); cellEmployee.classList.add('table-cell text-sm');
+        const cellEmployee = row.insertCell(); cellEmployee.classList.add('table-cell');
         const inputEmployee = document.createElement('input'); inputEmployee.type = 'text'; inputEmployee.name = 'employee';
         inputEmployee.value = initialData.employee || ''; inputEmployee.placeholder = '工号-姓名 (主键)';
         inputEmployee.classList.add('input-field', 'editing-cell'); inputEmployee.required = true;
@@ -147,7 +147,7 @@
         cellEmployee.appendChild(inputEmployee);
 
         // 工号 (只读或新增时输入)
-        const cellEmpId = row.insertCell(); cellEmpId.classList.add('table-cell text-sm');
+        const cellEmpId = row.insertCell(); cellEmpId.classList.add('table-cell');
         const inputEmpId = document.createElement('input'); inputEmpId.type = 'text'; inputEmpId.name = 'employeeId';
         inputEmpId.value = initialData.employeeId || ''; inputEmpId.placeholder = '输入工号';
         inputEmpId.classList.add('input-field', 'w-24', 'editing-cell'); inputEmpId.required = true;
@@ -155,7 +155,7 @@
         cellEmpId.appendChild(inputEmpId);
 
         // 姓名 (只读或新增时输入)
-        const cellEmpName = row.insertCell(); cellEmpName.classList.add('table-cell text-sm');
+        const cellEmpName = row.insertCell(); cellEmpName.classList.add('table-cell');
         const inputEmpName = document.createElement('input'); inputEmpName.type = 'text'; inputEmpName.name = 'employeeName';
         inputEmpName.value = initialData.employeeName || ''; inputEmpName.placeholder = '输入姓名';
         inputEmpName.classList.add('input-field', 'editing-cell'); inputEmpName.required = true;
@@ -163,21 +163,21 @@
         cellEmpName.appendChild(inputEmpName);
 
         // 所属部门 (下拉选择)
-        const cellDep = row.insertCell(); cellDep.classList.add('table-cell text-sm');
+        const cellDep = row.insertCell(); cellDep.classList.add('table-cell');
         const selectDep = document.createElement('select'); selectDep.name = 'depId';
         selectDep.classList.add('select-field', 'editing-cell'); selectDep.required = true; // 部门必选
         cellDep.appendChild(selectDep);
         await loadDepartmentOptions(selectDep, initialData.depId, false, '请选择部门'); // 不允许空选项
 
         // 状态 (Select)
-        const cellActive = row.insertCell(); cellActive.classList.add('table-cell text-sm');
+        const cellActive = row.insertCell(); cellActive.classList.add('table-cell');
         const selectActive = document.createElement('select'); selectActive.name = 'active';
         selectActive.classList.add('select-field', 'editing-cell');
         selectActive.innerHTML = `<option value="true" ${initialData.active !== false ? 'selected' : ''}>在职</option><option value="false" ${initialData.active === false ? 'selected' : ''}>离职</option>`;
         cellActive.appendChild(selectActive);
 
         // 参与统计 (Select)
-        const cellStats = row.insertCell(); cellStats.classList.add('table-cell text-sm');
+        const cellStats = row.insertCell(); cellStats.classList.add('table-cell');
         const selectStats = document.createElement('select'); selectStats.name = 'statistics';
         selectStats.classList.add('select-field', 'editing-cell');
         selectStats.innerHTML = `<option value="true" ${initialData.statistics !== false ? 'selected' : ''}>是</option><option value="false" ${initialData.statistics === false ? 'selected' : ''}>否</option>`;
