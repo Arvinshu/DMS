@@ -70,8 +70,11 @@
         WHERE zone = #{zone,jdbcType=VARCHAR}
     </select>
 
-
-    <select id="findDistinctAll" resultMap="BaseResultMap" parameterType="map">
+    <!-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| -->
+    <!--    这一条非常重要，涉及到所有页面使用到项目利润中心的查询-->
+    <!--    利润中心按照手工维护的列去重后查询，确保页面显示没有重复数据项-->
+    <!-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| -->
+    <select id="findDistinctCZRAll" resultMap="BaseResultMap" parameterType="map">
         SELECT <include refid="Base_Column_List" />
         FROM (
         SELECT DISTINCT ON (custom_zone_remark)
@@ -86,8 +89,6 @@
         </if>
     </select>
 
-
-
     <select id="findAll" resultMap="BaseResultMap" parameterType="map">
         SELECT <include refid="Base_Column_List" />
         FROM public.t_profit_center
@@ -96,6 +97,18 @@
         <if test="limit != null and offset != null">
             LIMIT #{limit} OFFSET #{offset}
         </if>
+    </select>
+
+
+    <!-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| -->
+    <!--    这一条非常重要，涉及到所有页面使用到项目利润中心的count-->
+    <!--    利润中心按照手工维护的列去重后count，确保页面显示没有重复数据项-->
+    <!-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| -->
+    <select id="countDistinctCZRAll" resultType="long" parameterType="map">
+
+        SELECT COUNT(DISTINCT custom_zone_remark) AS unique_zone_count
+        FROM public.t_profit_center;
+        <include refid="Where_Clause" />
     </select>
 
     <select id="countAll" resultType="long" parameterType="map">
