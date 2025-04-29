@@ -11,11 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 利润中心服务实现类
@@ -43,6 +41,20 @@ public class ProfitCenterServiceImpl implements ProfitCenterService {
         }
         return profitCenterMapper.findByZone(zone);
     }
+
+    // 所有使用到利润中心的地方，均需要调用此方法。因为此方法是对利润中心进行去重。
+    @Override
+    public List<ProfitCenter> findProfitCenterDistinctCZRAll(Map<String, Object> params) {
+        // 清理 params 中的字符串参数
+        sanitizeProfitCenterFilterParams(params);
+        try {
+            return profitCenterMapper.findDistinctCZRAll(params);
+        } catch (Exception e) {
+            log.error("查询利润中心列表时出错: params={}, error={}", params, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
 
     @Override
     public List<ProfitCenter> findProfitCenters(Map<String, Object> params) {

@@ -11,7 +11,6 @@
 </head>
 <body class="bg-gray-100 font-sans">
 <div class="flex flex-col min-h-screen">
-
     <header th:replace="~{fragments/header :: navbar}"></header>
     <div class="flex flex-1 overflow-hidden">
         <aside class="sub-nav-container flex-shrink-0 overflow-y-auto">
@@ -23,19 +22,15 @@
                 </ul>
             </nav>
         </aside>
-        <main class="content-area flex-1 overflow-y-auto p-6"><h1>项目管理</h1>
-
+        <main class="content-area flex-1 overflow-y-auto p-6">
+            <h1>项目管理</h1>
             <div class="view-container">
-
-                <div id="project-management-view" class="view active bg-white p-4 rounded-lg shadow"><h2
-                        class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目列表与任务</h2>
-
-                    <div id="project-search-bar" class="search-bar controls mb-4"><input type="text"
-                                                                                         id="search-project-name"
-                                                                                         placeholder="项目名称..."
-                                                                                         class="form-input">
-                        <select id="search-project-tags" multiple placeholder="选择标签..." class="form-multiselect">
-                        </select>
+                <div id="project-management-view" class="view active bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目列表与任务</h2>
+                    <div id="project-search-bar" class="search-bar controls mb-4">
+                        <input type="text" id="search-project-name" placeholder="项目名称..." class="form-input">
+                        <select id="search-project-tags" multiple placeholder="选择标签..."
+                                class="form-multiselect"></select>
                         <select id="search-business-type" class="form-select">
                             <option value="">所有业务类型</option>
                         </select>
@@ -56,13 +51,13 @@
                         <button id="search-project-btn" class="btn">搜索</button>
                         <button id="add-project-btn" class="btn btn-primary">新增项目</button>
                     </div>
-
                     <div id="project-list-container" class="table-container overflow-x-auto">
                         <table id="project-table" class="data-table min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    style="width: 3%;"></th>
+                                    style="width: 40px;">序号
+                                </th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     项目名称
                                 </th>
@@ -88,11 +83,11 @@
                                     style="width: 10%;">概览/进度
                                 </th>
                                 <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    style="width: 8%;">操作
+                                    style="width: 80px;">操作
                                 </th>
                             </tr>
                             <tr id="add-project-row" class="editable-row" style="display: none;">
-                                <td class="text-center"><i class="icon-add"></i></td>
+                                <td class="text-center text-gray-500">New</td>
                                 <td><input type="text" name="projectName" placeholder="项目名称*" required
                                            class="form-input text-sm"></td>
                                 <td><input type="text" name="createdAt" class="form-input text-sm flatpickr-input"
@@ -118,17 +113,14 @@
                             </tbody>
                         </table>
                     </div>
-
                     <div id="project-pagination" class="pagination-container mt-4">
                         <div th:replace="~{fragments/pagination :: pagination}"></div>
                     </div>
                 </div>
-
-                <div id="project-statistics-view" class="view hidden bg-white p-4 rounded-lg shadow"><h2
-                        class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目工作概览</h2>
+                <div id="project-statistics-view" class="view hidden bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目工作概览</h2>
                     <p class="text-gray-600">此部分功能暂未开放。</p>
                 </div>
-
             </div>
         </main>
     </div>
@@ -143,4 +135,3 @@
 <script th:src="@{/js/project/project_main.js}"></script>
 </body>
 </html>
-

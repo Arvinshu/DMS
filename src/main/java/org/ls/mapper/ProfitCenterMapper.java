@@ -21,6 +21,19 @@ public interface ProfitCenterMapper {
      */
     ProfitCenter findByZone(String zone);
 
+
+
+    /**
+     * 查询利润中心列表 (支持过滤和分页)
+     *
+     * @param params 包含过滤条件和分页参数的 Map
+     * - 可选过滤条件: zone (模糊), businessType (模糊), regionCategory (模糊), regionName (模糊), centerName (模糊), businessSubcategory (模糊), departmentName (模糊), responsiblePerson (模糊), workLocation (模糊), customZoneRemark (模糊), enabled
+     * - 分页参数: offset, limit
+     * @return ProfitCenter 列表
+     */
+    List<ProfitCenter> findDistinctCZRAll(Map<String, Object> params);
+
+
     /**
      * 查询利润中心列表 (支持过滤和分页)
      *

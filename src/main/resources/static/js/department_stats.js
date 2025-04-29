@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // 确保使用 Tailwind 类来控制样式，而不是依赖 style.css 中的 @apply
                     row.innerHTML = `
                     <td class="px-3 py-2 text-xs w-16 text-center font-medium">${item.departmentId}</td>
-                    <td class="px-3 py-2 text-xs w-48" title="${item.departmentName || '-'}"> ${formatDepName(item.departmentName)}</td>
+                    <td class="px-3 py-2 text-xs w-48" title="${item.departmentName || '-'}"> ${AppUtils.getShortName(item.departmentName,'数智化')}</td>
                     <td class="px-3 py-2 text-xs w-24">${item.departmentLevel || '-'}</td>
                     <td class="px-3 py-2 text-xs w-32">${item.managerDisplay || '-'}</td>
                     <td class="px-3 py-2 text-xs w-16 text-center">${item.employeeCount ?? '-'}</td>
@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headerHtml += '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right">累计人天</th>';
             departmentHeaders.forEach(depName => {
                 headerHtml += `
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40" title="${depName}"> ${formatDepName(depName)} </th>`;
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40" title="${depName}"> ${AppUtils.getShortName(depName,'数智化')} </th>`;
             });
             headerHtml += '</tr>';
             thead.innerHTML = headerHtml;
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headerHtml += '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">序号</th>';
             headerHtml += '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">利润中心</th>';
             departmentHeaders.forEach(depName => {
-                headerHtml += `<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right" title="${depName}"> ${formatDepName(depName)}</th>`;
+                headerHtml += `<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 text-right" title="${depName}"> ${AppUtils.getShortName(depName,'数智化')}</th>`;
             });
             headerHtml += '</tr>';
             thead.innerHTML = headerHtml;
@@ -1050,14 +1050,6 @@ document.addEventListener('DOMContentLoaded', function () {
         currentStartDate = startDateInput.value;
         currentEndDate = endDateInput.value;
         console.log(`[Stats] Initial date range: ${currentStartDate} to ${currentEndDate}`);
-    }
-
-    /* 工具函数 将部门名称按照'数智化'进行拆分，丢弃名称前面的公共部分，保留部门短名称*/
-    function formatDepName(name) {
-        if (!name) return '-';
-        return name.includes('数智化')
-            ? name.split('数智化').pop().trim()
-            : name;
     }
 
     /* 工具函数 在工具函数区域添加颜色生成器 */

@@ -233,7 +233,7 @@ public class ProjectServiceImpl implements ProjectService {
         // --- Profit Centers ---
         try {
             Map<String, Object> pcParams = Map.of("enabled", true); // Filter for enabled=true
-            List<ProfitCenter> activeProfitCenters = profitCenterService.findProfitCenters(pcParams);
+            List<ProfitCenter> activeProfitCenters = profitCenterService.findProfitCenterDistinctCZRAll(pcParams);
             // Convert to DTO or simple map for dropdown
             List<Map<String, Object>> profitCenterLookups = activeProfitCenters.stream()
                     .filter(pc -> pc != null && pc.getZone() != null && pc.getCustomZoneRemark() != null)

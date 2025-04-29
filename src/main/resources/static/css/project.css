@@ -1,628 +1,984 @@
 /**
  * 文件路径: src/main/resources/static/css/project.css
- * 开发时间: 2025-04-25 (更新)
+ * 开发时间: 2025-04-27 22:25 (更新)
  * 作者: Gemini (更新者)
  * 代码用途: 项目管理模块专属样式。
- * 更新内容: 移除冲突的 .task-actions 绝对定位样式。
+ * 更新内容:
+ * 1. 调整任务列表布局为纵向列表，添加表头。
+ * 2. 新增任务行内编辑 (.editing-inline) 样式。
+ * 3. 新增任务行内添加 (.inline-add-row) 样式 (目前未使用)。
+ * 4. 新增任务完整表单编辑/添加 (.editing-row) 样式。
+ * 5. 确保 flex 布局在各种状态下保持一致，修复错位问题。
+ * 6. 优化响应式布局。
+ * 7. 再次修复响应式布局中任务操作按钮消失的问题，调整 .task-actions-cell 和内部元素样式。
  */
 
 /* --- 页面布局 (内嵌侧边栏) --- */
 .sub-nav-container {
-    width: 180px;
-    flex-shrink: 0;
-    background-color: #f8f9fa;
-    border-right: 1px solid #dee2e6;
-    padding: 1rem;
-    height: calc(100vh - 4rem);
-    overflow-y: auto;
-    position: sticky;
-    top: 4rem;
+    width: 180px; /* 侧边栏宽度 */
+    flex-shrink: 0; /* 防止侧边栏被压缩 */
+    background-color: #f8f9fa; /* 淡灰色背景 */
+    border-right: 1px solid #dee2e6; /* 右边框 */
+    padding: 1rem; /* 内边距 */
+    height: calc(100vh - 4rem); /* 高度计算 (减去顶部导航栏高度) */
+    overflow-y: auto; /* 内容超出时显示滚动条 */
+    position: sticky; /* 固定定位 */
+    top: 4rem; /* 距离顶部导航栏的距离 */
 }
 
 .sub-nav {
-    list-style: none;
+    list-style: none; /* 移除列表默认样式 */
     padding: 0;
     margin: 0;
 }
 
 .sub-nav li {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5rem; /* 列表项下边距 */
 }
 
 .sub-nav a {
-    display: block;
-    padding: 0.6rem 1rem;
-    color: #495057;
-    text-decoration: none;
-    border-radius: 0.25rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    font-size: 0.9rem;
-    border-left: 3px solid transparent;
-    white-space: nowrap;
+    display: block; /* 块级元素，占满一行 */
+    padding: 0.6rem 1rem; /* 内边距 */
+    color: #495057; /* 默认文字颜色 */
+    text-decoration: none; /* 移除下划线 */
+    border-radius: 0.25rem; /* 圆角 */
+    transition: background-color 0.2s ease, color 0.2s ease; /* 过渡效果 */
+    font-size: 0.9rem; /* 字体大小 */
+    border-left: 3px solid transparent; /* 左边框 (用于激活状态) */
+    white-space: nowrap; /* 防止文字换行 */
 }
 
 .sub-nav a:hover {
-    background-color: #e9ecef;
-    color: #0056b3;
+    background-color: #e9ecef; /* 鼠标悬停背景色 */
+    color: #0056b3; /* 鼠标悬停文字颜色 */
 }
 
 .sub-nav a.active {
-    background-color: #e7f1ff;
-    color: #0056b3;
-    font-weight: 600;
-    border-left-color: #0056b3;
+    background-color: #e7f1ff; /* 激活状态背景色 */
+    color: #0056b3; /* 激活状态文字颜色 */
+    font-weight: 600; /* 字体加粗 */
+    border-left-color: #0056b3; /* 激活状态左边框颜色 */
 }
 
 .content-area {
-    flex-grow: 1;
-    height: calc(100vh - 4rem);
-    overflow-y: auto;
+    flex-grow: 1; /* 占据剩余空间 */
+    height: calc(100vh - 4rem); /* 高度计算 */
+    overflow-y: auto; /* 内容超出时显示滚动条 */
+    /* padding: 1.5rem; */ /* 在 main 标签上设置了 p-6 */
 }
 
 /* --- 视图容器和视图 --- */
-.view-container { /* ... */
+.view-container { /* 保留原有样式 */
 }
 
-.view { /* ... */
+.view { /* 保留原有样式 */
 }
 
-.view.active { /* ... */
+.view.active { /* 保留原有样式 */
 }
 
 /* --- 搜索栏 --- */
 #project-search-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
+    display: flex; /* Flex 布局 */
+    flex-wrap: wrap; /* 允许换行 */
+    gap: 0.5rem; /* 元素间距 */
+    align-items: center; /* 垂直居中对齐 */
 }
 
 #project-search-bar .form-input,
 #project-search-bar .form-select,
 #project-search-bar .form-multiselect {
-    min-width: 150px;
-    flex: 1 1 150px;
-    font-size: 0.875rem;
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
+    min-width: 150px; /* 最小宽度 */
+    flex: 1 1 150px; /* Flex 弹性布局 */
+    font-size: 0.875rem; /* 字体大小 */
+    padding-top: 0.4rem; /* 上内边距 */
+    padding-bottom: 0.4rem; /* 下内边距 */
 }
 
 #project-search-bar .form-multiselect {
-    height: auto;
-    min-height: calc(1.5em + 0.8rem + 2px);
-    padding: 0.4rem 0.75rem;
+    height: auto; /* 高度自适应 */
+    min-height: calc(1.5em + 0.8rem + 2px); /* 最小高度，与单行输入框对齐 */
+    padding: 0.4rem 0.75rem; /* 内边距 */
 }
 
 /* --- 项目列表表格 --- */
 #project-list-container {
-    margin-top: 1rem;
+    margin-top: 1rem; /* 与搜索栏的间距 */
 }
 
 .data-table {
-    border-collapse: collapse;
+    border-collapse: collapse; /* 合并边框 */
+    width: 100%; /* 宽度 100% */
 }
 
 .data-table th, .data-table td {
-    text-align: left;
-    vertical-align: middle;
-    font-size: 0.875rem;
-    line-height: 1.4;
+    text-align: left; /* 左对齐 */
+    vertical-align: middle; /* 垂直居中 */
+    font-size: 0.875rem; /* 字体大小 */
+    line-height: 1.4; /* 行高 */
+    padding: 0.5rem 0.75rem; /* 内边距 (调整自 th/td 的 px-3 py-2) */
+    border-bottom: 1px solid #e5e7eb; /* 底边框 */
 }
 
 .data-table th {
-    font-weight: 600;
-    white-space: nowrap;
-    color: #6b7280;
+    font-weight: 600; /* 表头字体加粗 */
+    white-space: nowrap; /* 表头不换行 */
+    color: #6b7280; /* 表头文字颜色 */
+    background-color: #f9fafb; /* 表头背景色 */
+    text-transform: uppercase; /* 字母大写 */
+    letter-spacing: 0.05em; /* 字间距 */
+    font-size: 0.75rem; /* 表头字体稍小 */
 }
 
-.data-table tbody tr:hover {
-    background-color: #f9fafb;
+.data-table tbody tr:not(.task-details-row):not(.editing-row):not(.add-project-row) {
+    cursor: pointer; /* 可点击手势 */
+    transition: background-color 0.15s ease-in-out; /* 背景色过渡 */
 }
 
-.toggle-tasks-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    color: #6c757d;
+.data-table tbody tr:not(.task-details-row):not(.editing-row):not(.add-project-row):hover {
+    background-color: #f0f9ff; /* 鼠标悬停背景色 */
 }
 
-.toggle-tasks-btn i {
-    transition: transform 0.2s ease-in-out;
-    width: 0.8rem;
-    height: 0.8rem;
-    display: inline-block;
+/* 展开的项目行样式 */
+.data-table tbody tr.expanded-project-row {
+    background-color: #e7f1ff !important; /* 展开行的背景色 (使用 !important 覆盖悬停效果) */
+    font-weight: 500; /* 字体稍粗 */
 }
 
-.toggle-tasks-btn i::before {
-    content: '\f054';
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+/* 项目编辑行/添加行样式 */
+.data-table tbody tr.editing-row,
+.data-table tbody tr#add-project-row {
+    background-color: #fefce8; /* 编辑/添加行背景色 (淡黄) */
 }
 
-.toggle-tasks-btn i.icon-chevron-down::before {
-    content: '\f078';
+.data-table tbody tr.editing-row td,
+.data-table tbody tr#add-project-row td {
+    padding-top: 0.8rem; /* 增加上下内边距给输入控件空间 */
+    padding-bottom: 0.8rem;
 }
 
+
+/* --- 标签样式 --- */
 .tag {
-    display: inline-block;
-    padding: 0.2em 0.6em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1;
-    color: #fff;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.25rem;
-    background-color: #6c757d;
-    margin-right: 0.3em;
-    margin-bottom: 0.3em;
+    display: inline-block; /* 行内块元素 */
+    padding: 0.2em 0.6em; /* 内边距 */
+    font-size: 0.75rem; /* 字体大小 */
+    font-weight: 600; /* 字体加粗 */
+    line-height: 1; /* 行高 */
+    color: #fff; /* 默认文字颜色 (白色) */
+    text-align: center; /* 居中 */
+    white-space: nowrap; /* 不换行 */
+    vertical-align: baseline; /* 基线对齐 */
+    border-radius: 0.25rem; /* 圆角 */
+    background-color: #6c757d; /* 默认背景色 (灰色) */
+    margin-right: 0.3em; /* 右边距 */
+    margin-bottom: 0.3em; /* 下边距 (用于换行时) */
 }
 
+/* 特定标签颜色 (示例) */
 .tag.core {
     background-color: #dc3545;
 }
 
+/* 红色 */
 .tag.web {
     background-color: #0d6efd;
 }
 
+/* 蓝色 */
 .tag.internal {
     background-color: #ffc107;
     color: #000;
 }
 
-.status {
-    padding: 0.2em 0.5em;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    display: inline-block;
-    white-space: nowrap;
+/* 黄色，黑色文字 */
+
+
+/* --- 优先级样式 (通用) --- */
+.priority {
+    padding: 0.2em 0.5em; /* 内边距 */
+    border-radius: 0.25rem; /* 圆角 */
+    font-size: 0.75rem; /* 字体大小 */
+    font-weight: 500; /* 字体粗细 */
+    display: inline-block; /* 行内块 */
+    white-space: nowrap; /* 不换行 */
+    line-height: 1.2; /* 调整行高 */
 }
 
+/* 高优先级 */
+.priority-High {
+    color: #FF4444;
+    background-color: #FFEBEE; /* 浅红色背景 */
+}
+
+/* 中优先级 */
+.priority-Medium {
+    color: #FFA500;
+    background-color: #FFF3E0; /* 浅橙色背景 */
+}
+
+/* 低优先级 */
+.priority-Low {
+    color: #28A745;
+    background-color: #E8F5E9; /* 浅绿色背景 */
+}
+
+/* 未知 - 深灰 */
+.priority-unknown {
+    background-color: #adb5bd;
+    color: #fff;
+}
+
+/* --- 状态样式 (通用) --- */
+.status {
+    padding: 0.2em 0.5em; /* 内边距 */
+    border-radius: 0.25rem; /* 圆角 */
+    font-size: 0.75rem; /* 字体大小 */
+    font-weight: 500; /* 字体粗细 */
+    display: inline-block; /* 行内块 */
+    white-space: nowrap; /* 不换行 */
+    line-height: 1.2; /* 调整行高 */
+}
+
+/* 项目/任务状态颜色 */
 .status-todo {
     background-color: #e9ecef;
     color: #495057;
 }
 
+/* 待办 - 灰色 */
 .status-inprogress {
     background-color: #cfe2ff;
     color: #0a58ca;
 }
 
+/* 进行中 - 淡蓝 */
 .status-completed {
     background-color: #d1e7dd;
     color: #146c43;
 }
 
+/* 已完成 - 淡绿 */
 .status-onhold {
     background-color: #fff3cd;
     color: #856404;
 }
 
+/* 已暂停 - 淡黄 */
 .status-cancelled {
     background-color: #f8d7da;
     color: #842029;
 }
 
+/* 已取消 - 淡红 */
 .status-unknown {
     background-color: #adb5bd;
     color: #fff;
 }
 
+/* 未知 - 深灰 */
+
+/* --- 进度条 --- */
 .progress-bar {
-    background-color: #e9ecef;
-    border-radius: 0.25rem;
-    height: 0.6rem;
-    overflow: hidden;
-    width: 80px;
-    margin: 0 auto;
+    background-color: #e9ecef; /* 背景色 */
+    border-radius: 0.25rem; /* 圆角 */
+    height: 0.6rem; /* 高度 */
+    overflow: hidden; /* 隐藏超出部分 */
+    width: 80px; /* 固定宽度 */
+    /* margin: 0 auto; */ /* 移除自动居中，依赖单元格 text-align: center */
+    display: inline-block; /* 改为行内块，使其能在单元格内居中 */
+    vertical-align: middle; /* 垂直居中 */
 }
 
 .progress-bar div {
-    background-color: #0d6efd;
-    height: 100%;
-    transition: width 0.3s ease-in-out;
+    background-color: #0d6efd; /* 默认进度颜色 (蓝色) */
+    height: 100%; /* 高度 100% */
+    transition: width 0.3s ease-in-out; /* 宽度过渡效果 */
 }
 
 .progress-bar div[style*="width: 100%"] {
     background-color: #198754;
 }
 
+/* 完成时颜色 (绿色) */
 .progress-bar div[style*="width: 0%"] {
     background-color: #6c757d;
 }
 
-/* --- 任务详情行 --- */
+/* 0% 时颜色 (灰色) */
+
+/* ============================================================ */
+/* --- 任务详情区域样式 (task-details-row 内的 .task-container) --- */
+/* ============================================================ */
+
 .task-details-row td {
-    padding: 0;
-    border-top: 2px solid #dee2e6;
-    border-bottom: 2px solid #dee2e6;
-    background-color: #f1f5f9;
+    padding: 0 !important; /* 移除单元格默认内边距 */
+    border-top: 2px solid #dee2e6; /* 上边框加粗 */
+    border-bottom: 2px solid #dee2e6; /* 下边框加粗 */
+    background-color: #f1f5f9; /* 任务区域背景色 (淡蓝灰) */
 }
 
 .task-container {
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.5rem; /* 任务容器内边距 */
 }
 
 .task-container h4 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 0.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #334155;
+    margin-bottom: 1rem; /* 标题下边距 */
+    border-bottom: 1px solid #e0e0e0; /* 标题下划线 */
+    padding-bottom: 0.5rem; /* 标题下内边距 */
+    font-size: 1.1rem; /* 标题字体大小 */
+    font-weight: 600; /* 标题字体加粗 */
+    color: #334155; /* 标题颜色 */
 }
 
+/* --- 任务阶段分组 --- */
 .task-stages-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
+    margin-top: 1rem; /* 阶段容器与表头间距 */
 }
 
 .task-stage-group {
-    flex: 1 1 300px;
-    min-width: 250px;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.375rem;
-    padding: 0.8rem;
-    background-color: #fff;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border-bottom: 1px dashed #d1d5db; /* 阶段间分隔线 */
+    padding: 1rem 0; /* 阶段上下内边距 */
+    margin-bottom: 1rem; /* 阶段间下边距 */
+}
+
+.task-stage-group:last-child {
+    border-bottom: none; /* 最后一个阶段无下边框 */
+    margin-bottom: 0;
+    padding-bottom: 0; /* 最后一个阶段无下内边距 */
 }
 
 .task-stage-group h5 {
-    margin-top: 0;
-    margin-bottom: 0.8rem;
-    font-size: 0.9rem;
-    color: #475569;
-    font-weight: 600;
-    border-bottom: 1px dashed #e2e8f0;
-    padding-bottom: 0.4rem;
+    margin: 0 0 0.8rem; /* 阶段标题下边距 */
+    font-size: 0.95rem; /* 阶段标题字体大小 */
+    color: #475569; /* 阶段标题颜色 */
+    font-weight: 300; /* 阶段标题字体加粗 */
 }
 
+/* --- 任务列表表头 (.task-list-header) --- */
+.task-list-header {
+    display: flex; /* Flex 布局 */
+    padding: 0.4rem 0.8rem; /* 内边距 */
+    margin-bottom: 0.5rem; /* 与第一个任务项的间距 */
+    font-size: 0.8rem; /* 字体大小 */
+    font-weight: 600; /* 字体加粗 */
+    color: #6b7280; /* 文字颜色 */
+    background-color: #f9fafb; /* 背景色 */
+    border-bottom: 1px solid #e5e7eb; /* 下边框 */
+    border-radius: 0.25rem 0.25rem 0 0; /* 上圆角 */
+}
+
+.task-list-header > span {
+    flex-shrink: 0; /* 防止列被压缩 */
+    white-space: nowrap; /* 不换行 */
+    padding: 0 0.4rem; /* 左右内边距，模拟单元格间距 */
+    box-sizing: border-box; /* 边框和内边距包含在宽度内 */
+}
+
+.task-list-header > span:first-child {
+    padding-left: 0;
+}
+
+.task-list-header > span:last-child {
+    padding-right: 0;
+}
+
+/* 表头列宽配置 (与 task-item 的列宽保持一致) */
+/*任务列表-表头-序号*/
+.task-header-seq {
+    width: 40px;
+    min-width: 40px; /* 防止内容换行挤压 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务名称*/
+.task-header-name {
+    width: 200px; /* 增加名称宽度 */
+    min-width: 200px; /* 防止内容换行挤压 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务描述*/
+.task-header-description {
+    width: 300px;
+    flex-grow: 1; /* 描述列自动伸缩 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务优先级*/
+.task-header-priority {
+    width: 100px;
+    min-width: 100px; /* 防止内容换行挤压 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务负责人*/
+.task-header-assignee {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务开始日期*/
+.task-header-startdate {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务结束日期*/
+.task-header-duedate {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务状态*/
+.task-header-status {
+    min-width: 100px; /* 防止内容换行挤压 */
+    text-align: center;
+}
+
+/*任务列表-表头-任务操作*/
+.task-header-actions {
+    width: 100px;
+    min-width: 100px; /* 防止内容换行挤压 */
+    text-align: center;
+}
+
+/* --- 任务项列表 ul --- */
 .task-list {
-    list-style: none;
+    list-style: none; /* 移除列表默认样式 */
     padding: 0;
     margin: 0;
 }
 
+/* --- 任务项样式 (.task-item) --- */
 .task-item {
-    border: 1px solid #e2e8f0;
-    border-radius: 0.375rem;
-    padding: 0.6rem 0.8rem;
-    margin-bottom: 0.5rem;
-    background-color: #fff;
-    transition: box-shadow 0.2s ease;
+    display: flex; /* Flex 布局，实现水平排列 */
+    align-items: stretch; /* 子元素高度撑满 */
+    border: 1px solid #e2e8f0; /* 边框 */
+    border-radius: 0.25rem; /* 圆角 */
+    margin-bottom: 0.5rem; /* 任务项间距 */
+    background-color: #fff; /* 背景色 */
+    transition: box-shadow 0.2s ease, border-color 0.2s ease; /* 过渡效果 */
+    overflow: hidden; /* 隐藏内部溢出 */
 }
 
-.task-item:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+.task-item:hover:not(.editing-inline):not(.inline-add-row):not(.editing-row) {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* 悬停阴影 */
+    border-color: #cbd5e1; /* 悬停边框颜色 */
 }
 
-/* 任务项内部布局 */
-.task-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.3rem;
+/* 任务项内部列 (span) 样式 */
+.task-item > span {
+    padding: 0.6rem 0.8rem; /* 单元格内边距 */
+    font-size: 0.875rem; /* 字体大小 */
+    /* overflow: hidden; */ /* 移除全局 overflow，让描述等可以换行 */
+    /* text-overflow: ellipsis; */ /* 移除全局省略号 */
+    border-right: 1px solid #f3f4f6; /* 右侧分隔线 */
+    flex-shrink: 0; /* 防止被压缩 */
+    display: flex; /* 使用 Flex 垂直居中内容 */
+    align-items: center; /* 垂直居中 */
+    box-sizing: border-box; /* 边框和内边距包含在宽度内 */
 }
 
+.task-item > span:last-child {
+    border-right: none; /* 最后一列无右边框 */
+}
+
+/* 任务项列宽配置 (与表头一致) */
+
+/*任务列表-任务项-序号*/
+.task-seq {
+    width: 40px;
+    min-width: 40px; /* 防止内容换行挤压 */
+    justify-content: center;
+    color: #6b7280;
+}
+
+/*任务列表-任务项-任务名称*/
 .task-name {
-    font-weight: 600;
-    color: #1e293b;
-    flex-grow: 1;
-    margin-right: 0.5rem;
-    font-size: 0.9rem;
+    width: 200px; /* 增加名称宽度 */
+    min-width: 200px; /* 防止内容换行挤压 */
+    white-space: normal; /* 允许换行 */
+    word-break: break-word; /* 允许单词内换行 */
 }
 
-.task-priority {
-    font-size: 0.7rem;
-    padding: 0.1em 0.4em;
-    border-radius: 3px;
-    color: #fff;
+/*任务列表-任务项-任务描述*/
+.task-description {
+    width: 300px;
+    flex-grow: 1; /* 自动伸缩 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    color: #666; /* 文字颜色 */
+    white-space: normal; /* 允许换行 */
+    word-break: break-word; /* 允许单词内换行 */
+    /* overflow: visible; */ /* 确保内容可见 */
+    align-items: flex-start; /* 内容顶部对齐 (如果希望多行文本从头开始) */
+    padding-top: 0.6rem; /* 确保顶部对齐时内边距正确 */
 }
 
-.priority-high {
-    background-color: #dc2626;
+/*任务列表-任务项-任务优先级*/
+.task-priority-cell {
+    width: 100px;
+    min-width: 100px; /* 防止内容换行挤压 */
+    justify-content: center;
 }
 
-.priority-medium {
-    background-color: #f59e0b;
-    color: #fff;
+/*任务列表-任务项-任务负责人*/
+.task-assignee {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    flex-shrink: 0; /* 防止列被压缩 */
 }
 
-.priority-low {
-    background-color: #64748b;
+/*任务列表-任务项-任务开始日期*/
+.task-startdate {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    font-size: 0.8rem; /* 日期字体稍小 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    justify-content: center;
 }
 
-.task-meta {
-    font-size: 0.8rem;
-    color: #64748b;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    align-items: center;
-    margin-bottom: 0.4rem;
+/*任务列表-任务项-任务结束日期*/
+.task-duedate {
+    width: 120px;
+    min-width: 120px; /* 防止内容换行挤压 */
+    font-size: 0.8rem; /* 日期字体稍小 */
+    flex-shrink: 0; /* 防止列被压缩 */
+    justify-content: center;
 }
 
-.task-meta span:not(.task-actions-inline) {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 0.5rem;
+/*任务列表-任务项-任务状态*/
+.task-status-cell {
+    min-width: 100px; /* 防止内容换行挤压 */
+    justify-content: center;
 }
 
-.task-meta i {
-    margin-right: 0.3em;
-    width: 0.8em;
-    height: 0.8em;
+/*任务列表-任务项-任务操作*/
+.task-actions-cell {
+    min-width: 100px;
+    justify-content: center; /* 内容右对齐 */
 }
 
-.task-description-meta {
-    font-size: 0.85rem;
-    color: #475569;
-    flex-basis: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: help;
-    margin-top: 0.2rem;
-}
-
-/* *** 修改: 移除旧的 .task-actions 绝对定位样式 *** */
-/*
-.task-actions {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.task-item:hover .task-actions {
-    opacity: 1;
-}
-.task-actions .btn-icon { ... }
-.task-actions .btn-icon:hover { ... }
-*/
-
-/* 行内任务操作按钮样式 */
+/* --- 行内操作按钮 --- */
 .task-actions-inline {
-    display: inline-flex;
-    gap: 0.5rem;
-    margin-left: auto;
-    align-items: center;
+    display: inline-flex; /* 行内 Flex 布局 */
+    gap: 0.5rem; /* 按钮间距 */
+    align-items: center; /* 垂直居中 */
 }
 
 .task-actions-inline .btn-icon {
-    padding: 0.2rem;
-    font-size: 0.8rem;
-    color: #94a3b8;
-    background: none;
-    border: none;
-    cursor: pointer;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center; /* 让图标和文字垂直居中 */
+    padding: 0.2rem; /* 内边距 */
+    font-size: 0.8rem; /* 图标大小 */
+    color: #94a3b8; /* 默认图标颜色 */
+    background: none; /* 无背景 */
+    border: none; /* 无边框 */
+    cursor: pointer; /* 可点击手势 */
+    display: inline-flex; /* 使图标和文字在同一行 */
+    align-items: center; /* 图标和文字垂直居中 */
+    line-height: 1; /* 调整行高避免额外空间 */
 }
 
 .task-actions-inline .btn-icon:hover {
-    color: #1e293b;
+    color: #1e293b; /* 悬停图标颜色 */
 }
 
 .task-actions-inline .btn-icon .btn-text {
-    margin-left: 0.25rem; /* 图标和文字间距 */
-    font-size: 0.8rem; /* 按钮文字大小 */
+    margin-left: 0.25rem; /* 文字与图标间距 */
+    font-size: 0.8rem; /* 文字大小 */
+    display: none; /* 默认隐藏文字 */
 }
 
-/* 如果图标库未加载，可以取消注释下面这行来隐藏图标占位符 */
-/* .task-actions-inline .btn-icon i { display: none; } */
+/* 在非编辑状态下，鼠标悬停时显示文字 */
+/*.task-item:not(.editing-inline) .task-actions-inline .btn-icon:hover .btn-text {*/
+/*    display: inline;*/
+/*}*/
 
-
-.task-stage-group .add-task-to-stage-btn {
-    margin-top: 0.5rem;
+/* 或者始终显示文字 */
+.task-actions-inline .btn-icon .btn-text {
+    display: inline;
 }
 
-/* 添加/编辑任务表单 */
-.task-item.editing-row {
-    background-color: #fefce8;
-    border-color: #fde68a;
+/* --- 行内编辑 (.editing-inline) 样式 --- */
+.task-item.editing-inline {
+    background-color: #fefce8; /* 淡黄背景 */
+    outline: 1px solid #facc15; /* 黄色轮廓 */
+    transition: background-color 0.2s ease-in-out;
 }
 
-.task-form {
-    display: grid;
-    gap: 0.8rem;
+/* 调整行内编辑时单元格的内边距和对齐方式 */
+.task-item.editing-inline > span {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    align-items: center; /* 确保输入控件垂直居中 */
 }
 
-.task-form .form-group {
-    display: flex;
-    flex-direction: column;
+/* 行内编辑的输入控件基础样式 */
+.task-item.editing-inline .form-input-sm,
+.task-item.editing-inline .form-select-sm,
+.task-item.editing-inline .form-textarea-sm {
+    padding: 0.25rem 0.5rem; /* 较小的内边距 */
+    font-size: 0.875rem; /* 字体大小 */
+    line-height: 1.25; /* 行高 */
+    border: 1px solid #d1d5db; /* 边框 */
+    border-radius: 0.25rem; /* 圆角 */
+    width: 100%; /* 宽度 100% */
+    box-sizing: border-box; /* 包含内边距和边框 */
+    background-color: #fff; /* 白色背景 */
+    margin: 0; /* 移除可能的外边距 */
 }
 
-.task-form label {
-    font-size: 0.8rem;
-    margin-bottom: 0.2rem;
-    color: #334155;
-    font-weight: 500;
+.task-item.editing-inline .form-textarea-sm {
+    min-height: 3em; /* 文本域最小高度 */
+    resize: vertical; /* 允许垂直调整大小 */
+    line-height: 1.4; /* 文本域行高 */
 }
 
-.task-form .form-input,
-.task-form .form-select,
-.task-form .form-textarea {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 0.25rem;
+/* 行内编辑的操作按钮 */
+.task-item.editing-inline .task-actions-cell .btn {
+    margin-left: 0.25rem; /* 按钮间距 */
 }
 
-/* 添加边框和圆角 */
-.task-form .form-textarea {
-    min-height: 50px;
-    resize: vertical;
+/* 行内编辑时，描述列不再自动伸缩 */
+.task-item.editing-inline .task-description {
+    flex-grow: 0;
 }
 
-.task-form .form-actions {
-    grid-column: 1 / -1;
-    text-align: right;
-    margin-top: 0.5rem;
+/* 行内编辑时，名称列自动伸缩 */
+.task-item.editing-inline .task-name {
+    flex-grow: 1;
 }
 
-/* 确保这个样式存在且正确 */
-.task-form .task-dates-group {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-end;
+/* --- 行内添加 (.inline-add-row) 样式 --- */
+/* 注意：此样式目前可能未使用，因为“添加任务到此阶段”已改为使用完整表单 */
+.inline-add-row {
+    background-color: #f0f9ff; /* 淡蓝背景 */
+    border: 1px dashed #90cdf4; /* 蓝色虚线边框 */
 }
 
-.task-form .task-dates-group input {
-    flex: 1;
-}
-
-
-/* --- 行内编辑样式 (通用) --- */
-.editable-row input[type="text"],
-.editable-row input[type="number"],
-.editable-row input[type="date"],
-.editable-row select,
-.editable-row textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.3rem 0.5rem;
+.inline-add-row .form-input-sm {
+    padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 0.25rem;
+    line-height: 1.25;
+    border: 1px solid #bae6fd; /* 更淡的蓝色边框 */
 }
 
-.editable-row textarea {
-    min-height: 40px;
-    resize: vertical;
+.inline-add-row .task-name {
+    flex-grow: 1; /* 名称输入框伸缩 */
 }
 
-.editable-row select[multiple] {
-    height: auto;
-    min-height: 60px;
+.inline-add-row .task-actions-inline .btn {
+    margin-left: 0.25rem;
 }
 
-#add-project-row td {
-    background-color: #f0f9ff;
-    border-top: 1px dashed #bae6fd;
-    border-bottom: 1px dashed #bae6fd;
+/* --- 完整表单编辑/添加 (.editing-row) 样式 --- */
+.task-item.editing-row {
+    border: 1px solid #ccc; /* 边框 */
+    padding: 1rem; /* 内边距 */
+    background-color: #f9fafb; /* 背景色 */
+    display: block; /* 改为块级，不再是 flex */
+    margin-bottom: 1rem; /* 增加下边距 */
 }
 
-/* --- 加载和错误状态 --- */
-.loading, .error-message {
-    text-align: center;
-    padding: 1rem;
-    color: #64748b;
-    font-style: italic;
+.task-item.editing-row .task-form {
+    display: grid; /* 网格布局 */
+    /* 自动适应列数，最小 200px */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem; /* 网格间距 */
 }
 
-.error-message {
-    color: #ef4444;
-    font-weight: 500;
+.task-item.editing-row .form-group {
+    display: flex;
+    flex-direction: column; /* 标签在输入框上方 */
 }
 
-.loader {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: auto;
+.task-item.editing-row .form-group label {
+    margin-bottom: 0.25rem; /* 标签下边距 */
+    font-size: 0.8rem; /* 标签字体大小 */
+    font-weight: 500; /* 标签字体粗细 */
+    color: #4b5563; /* 标签颜色 */
 }
 
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
+/* 让描述输入框占据更多空间 (示例：跨越两列) */
+.task-item.editing-row .task-description-group {
+    grid-column: span 2; /* 根据需要调整 */
+}
+
+/* 在小屏幕上，描述只占一列 */
+@media (max-width: 768px) {
+    .task-item.editing-row .task-description-group {
+        grid-column: span 1;
     }
-    100% {
-        transform: rotate(360deg);
-    }
 }
 
-.loading-overlay-unique-id { /* ... */
+/* 日期组并排显示 */
+.task-item.editing-row .task-dates-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 两列 */
+    gap: 0.5rem; /* 间距 */
+    align-items: end; /* 底部对齐输入框 */
+}
+
+.task-item.editing-row .task-dates-group label {
+    grid-column: 1 / -1; /* 标签占据整行 */
+    margin-bottom: 0.25rem; /* 标签下边距 */
+}
+
+/* 操作按钮区域 */
+.task-item.editing-row .form-actions {
+    grid-column: 1 / -1; /* 占据整行 */
+    text-align: right; /* 按钮右对齐 */
+    margin-top: 0.5rem; /* 与上方元素间距 */
+    padding-top: 0.5rem; /* 增加上内边距 */
+    border-top: 1px solid #e5e7eb; /* 顶部添加分隔线 */
+}
+
+.task-item.editing-row .form-actions .btn {
+    margin-left: 0.5rem; /* 按钮间距 */
+}
+
+
+/* --- 响应式调整 --- */
+@media (max-width: 768px) {
+    /* --- 侧边栏调整 --- */
+    .sub-nav-container {
+        width: 100%; /* 宽度占满 */
+        border-right: none; /* 移除右边框 */
+        border-bottom: 1px solid #e2e8f0; /* 添加下边框 */
+        margin-bottom: 1rem; /* 下边距 */
+        padding: 0.5rem; /* 减小内边距 */
+        height: auto; /* 高度自适应 */
+        position: static; /* 取消固定定位 */
+    }
+
+    .sub-nav {
+        display: flex; /* 水平排列 */
+        overflow-x: auto; /* 水平滚动 */
+        padding-bottom: 0.5rem; /* 底部留出滚动条空间 */
+        scrollbar-width: thin; /* 细滚动条 (Firefox) */
+    }
+
+    .sub-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    /* Webkit 滚动条高度 */
+    .sub-nav::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 2px;
+    }
+
+    /* Webkit 滚动条滑块 */
+    .sub-nav li {
+        margin-right: 0.5rem; /* 右边距 */
+        margin-bottom: 0; /* 移除下边距 */
+        flex-shrink: 0; /* 防止被压缩 */
+    }
+
+    .sub-nav a {
+        border-left: none; /* 移除左边框 */
+        border-bottom: 3px solid transparent; /* 添加下边框用于激活状态 */
+        padding: 0.5rem 0.8rem; /* 调整内边距 */
+    }
+
+    .sub-nav a.active {
+        border-left-color: transparent; /* 确保移除左边框颜色 */
+        border-bottom-color: #0056b3; /* 激活状态下边框颜色 */
+    }
+
+    .content-area {
+        padding: 0.5rem; /* 减小内容区域内边距 */
+        height: auto; /* 高度自适应 */
+    }
+
+    /* --- 项目列表调整 --- */
+    .data-table th, .data-table td {
+        font-size: 0.8rem; /* 减小字体 */
+        padding: 0.4rem 0.5rem; /* 减小内边距 */
+    }
+
+    /* 隐藏部分列 */
+    .data-table th:nth-child(4), /* 标签 */
+    .data-table td:nth-child(4),
+    .data-table th:nth-child(6), /* 利润中心 */
+    .data-table td:nth-child(6),
+    .data-table th:nth-child(7), /* 当前阶段 */
+    .data-table td:nth-child(7),
+    .data-table th:nth-child(9), /* 进度 */
+    .data-table td:nth-child(9) {
+        display: none;
+    }
+
+    /* --- 任务列表调整 --- */
+    .task-container {
+        padding: 0.8rem;
+    }
+
+    /* 减小任务容器内边距 */
+    .task-container h4 {
+        font-size: 1rem;
+        margin-bottom: 0.8rem;
+    }
+
+    /* 调整标题 */
+    /* 隐藏任务表头的部分列 */
+    .task-list-header {
+        display: none;
+    }
+
+    /* 在移动端直接隐藏表头 */
+    /* 调整任务项布局为堆叠卡片式 */
+    .task-item {
+        flex-direction: column; /* 垂直排列 */
+        align-items: stretch; /* 拉伸对齐 */
+        padding: 0.5rem; /* 添加卡片内边距 */
+        /* position: relative; /* Removed */
+    }
+
+    .task-item > span {
+        width: 100% !important; /* 宽度占满 */
+        border-right: none;
+        border-bottom: 1px dashed #f3f4f6;
+        padding: 0.4rem 0; /* 调整上下内边距，移除左右内边距 */
+        display: block; /* 改为块级 */
+        font-size: 0.8rem;
+    }
+
+    /* 隐藏特定列 */
+    .task-item .task-description,
+    .task-item .task-startdate,
+    .task-item .task-duedate {
+        display: none;
+    }
+
+    /* 调整显示列 */
+    .task-item .task-seq {
+        display: none;
+    }
+
+    /* 隐藏序号列 */
+    .task-item .task-name {
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+        font-size: 0.9rem;
+    }
+
+    /* 突出任务名称 */
+    /* 添加标签前缀 */
+    .task-item .task-assignee::before {
+        content: "负责人: ";
+        font-weight: 500;
+        color: #6b7280;
+        margin-right: 0.3em;
+    }
+
+    .task-item .task-status-cell {
+        text-align: left;
+    }
+
+    /* 状态左对齐 */
+    .task-item .task-status-cell::before {
+        content: "状态: ";
+        font-weight: 500;
+        color: #6b7280;
+        margin-right: 0.3em;
+    }
+
+    .task-item .task-status-cell .status {
+        font-size: 0.8rem;
+    }
+
+    /* 确保最后一个 span (通常是 actions-cell) 没有下边框 */
+    .task-item > span:last-child {
+        border-bottom: none;
+    }
+
+    /* --- Mobile Actions Cell Styling (Revisited) --- */
+    .task-actions-cell {
+        display: block; /* 确保是块级元素 */
+        width: 100%; /* 占据全部宽度 */
+        padding: 0.5rem 0 0 0; /* 只有上边距 */
+        margin-top: 0.5rem; /* 与上方元素的间距 */
+        border-top: 1px dashed #e2e8f0; /* 顶部虚线分隔符 */
+        text-align: right; /* 内部元素（按钮组）靠右 */
+        /* 覆盖基础 span 样式 */
+        border-right: none;
+        border-bottom: none;
+        align-items: initial; /* 重置 align-items */
+    }
+
+    .task-actions-inline {
+        display: inline-flex; /* 按钮组使用 inline-flex */
+        justify-content: flex-end; /* 按钮靠右 */
+        align-items: center; /* 按钮垂直居中 */
+        gap: 0.5rem; /* 按钮间距 */
+        width: auto; /* 宽度自适应 */
+        /* 确保按钮组可见 */
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .task-actions-inline .btn-icon {
+        display: inline-flex; /* 确保按钮可见 */
+        padding: 0.2rem; /* 按钮内边距 */
+        color: #6b7280; /* 按钮图标颜色 */
+        font-size: 1rem; /* 按钮图标大小 */
+        /* 确保按钮可见 */
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .task-actions-inline .btn-icon:hover {
+        color: #1e293b; /* 悬停颜色 */
+    }
+
+    .task-actions-inline .btn-icon .btn-text {
+        display: none; /* 移动端隐藏文字 */
+    }
+
+    /* 调整行内编辑/添加在移动端的样式 */
+    .task-item.editing-inline,
+    .task-item.inline-add-row {
+        padding: 0.8rem; /* 增加内边距 */
+    }
+
+    .task-item.editing-inline > span,
+    .task-item.inline-add-row > span {
+        padding: 0.3rem 0;
+    }
+
+    /* 行内编辑时，隐藏部分标签前缀 */
+    .task-item.editing-inline .task-assignee::before,
+    .task-item.editing-inline .task-status-cell::before {
+        display: none;
+    }
+
+    /* 确保行内编辑/添加的操作按钮样式正确 */
+    .task-item.editing-inline .task-actions-cell,
+    .task-item.inline-add-row .task-actions-cell {
+        /* Styles are inherited from the above .task-actions-cell */
+        /* 可能需要微调 text-align 或 justify-content */
+    }
 }
 
 /* --- 分页容器 --- */
 .pagination-container {
-    margin-top: 1.5rem;
-    padding-bottom: 1rem;
+    margin-top: 1.5rem; /* 与表格的间距 */
+    padding-bottom: 1rem; /* 底部留白 */
 }
 
-/* --- 响应式调整 --- */
-@media (max-width: 768px) {
-    .sub-nav-container {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #e2e8f0;
-        margin-right: 0;
-        margin-bottom: 1rem;
-        padding: 0.5rem;
-        height: auto;
-        overflow-y: visible;
-        position: static;
-    }
-
-    .sub-nav {
-        display: flex;
-        overflow-x: auto;
-        padding-bottom: 0.5rem;
-    }
-
-    .sub-nav li {
-        margin-bottom: 0;
-        margin-right: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .sub-nav a {
-        border-left: none;
-        border-bottom: 3px solid transparent;
-        padding: 0.5rem 0.8rem;
-    }
-
-    .sub-nav a.active {
-        border-left: none;
-        border-bottom-color: #0056b3;
-        background-color: transparent;
-    }
-
-    .content-area {
-        padding: 0.5rem;
-        height: auto;
-        overflow-y: visible;
-    }
-
-    #project-search-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #project-search-bar .form-input, #project-search-bar .form-select, #project-search-bar .form-multiselect {
-        min-width: 100%;
-        flex-basis: auto;
-    }
-
-    #project-table th:nth-child(4), #project-table td:nth-child(4), #project-table th:nth-child(5), #project-table td:nth-child(5), #project-table th:nth-child(6), #project-table td:nth-child(6) {
-        display: none;
-    }
-
-    .task-stages-wrapper {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .task-stage-group {
-        flex-basis: auto;
-    }
-
-    .task-meta {
-        gap: 0.5rem;
-    }
-
-    .task-actions-inline {
-        margin-left: 0; /* 小屏幕上靠左 */
-    }
+/* --- 通用表单元素微调 (如果需要) --- */
+.form-input-sm, .form-select-sm, .form-textarea-sm {
+    /* 定义一些小尺寸的表单控件，用于行内编辑 */
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    border-radius: 0.25rem;
 }

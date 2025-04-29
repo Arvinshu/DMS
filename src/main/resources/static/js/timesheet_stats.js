@@ -108,11 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rawDep = item.dep || '-';
 
             // 如果包含“公司”，就取“公司”之后那部分；否则原样显示
-            const displayDep = rawDep.includes('数智化')
-                ? rawDep.split('数智化').pop()
-                : rawDep;
-
-            cell.textContent = displayDep;
+            cell.textContent =  AppUtils.getShortName(rawDep,'数智化');
             cell.title = rawDep;  // 保留完整名称到 title 里
 
 

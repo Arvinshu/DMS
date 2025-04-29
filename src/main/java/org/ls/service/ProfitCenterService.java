@@ -23,6 +23,15 @@ public interface ProfitCenterService {
     /**
      * 查询利润中心列表（支持过滤和分页）。
      * 实现类中应处理分页和过滤逻辑。
+     * 所有使用到利润中心的地方，均需要调用此方法。因为此方法是对利润中心进行去重。
+     * @param params 包含过滤条件和分页参数 (offset, limit) 的 Map。
+     * @return ProfitCenter 实体列表。
+     */
+    List<ProfitCenter> findProfitCenterDistinctCZRAll(Map<String, Object> params);
+
+    /**
+     * 查询利润中心列表（支持过滤和分页）。
+     * 实现类中应处理分页和过滤逻辑。
      *
      * @param params 包含过滤条件和分页参数 (offset, limit) 的 Map。
      * @return ProfitCenter 实体列表。

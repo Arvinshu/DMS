@@ -214,6 +214,29 @@
         }
     };
 
+
+    /**
+     * 将名称按照指定拆分字符进行拆分，丢弃名称前面的公共部分，保留末尾部分作为短名称。
+     * @param {string} fullName - 完整的名称字符串。
+     * @param {string} separator - 用于拆分的字符或字符串。
+     * @returns {string} 处理后的短名称，如果输入无效则返回空字符串或'-'。
+     * cell.textContent =  AppUtils.getShortName(rawDep,'数智化');
+     */
+    AppUtils.getShortName = function (fullName, separator) {
+        // 检查输入是否有效
+        if (!fullName || typeof fullName !== 'string') {
+            return ''; // 或者可以返回 '-' 如果业务上需要
+        }
+        // 如果没有提供分隔符或者名称中不包含分隔符，直接返回原始名称（去除首尾空格）
+        if (!separator || !fullName.includes(separator)) {
+            return fullName.trim();
+        }
+        // 按分隔符拆分，取最后一部分，并去除首尾空格
+        const parts = fullName.split(separator);
+        return parts.pop().trim();
+    };
+
+
     window.AppUtils = AppUtils;
 
 })(window);
