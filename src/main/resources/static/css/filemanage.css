@@ -1,0 +1,210 @@
+/**
+ * 目录: src/main/resources/static/css/filemanage.css
+ * 文件名: filemanage.css
+ * 开发时间: 2025-04-29 10:27:10 EDT
+ * 作者: Gemini
+ * 用途: 文件管理页面 (filemanage.html) 的特定样式。
+ */
+
+/* -------------------------
+   Layout Styles
+   (Assuming .main-content-wrapper is already defined in style.css or project.css for flex display)
+   ------------------------- */
+
+/* Ensure the wrapper uses flexbox if not already defined */
+.main-content-wrapper {
+    display: flex;
+    /* height: calc(100vh - height_of_header); /* Adjust height based on header */
+    /* overflow: hidden; /* Prevent wrapper from scrolling */
+}
+
+#filemanage-sidebar {
+    /* Sidebar width - adjust as needed */
+    flex: 0 0 220px; /* Don't grow, don't shrink, base width 220px */
+    /* Inherit background/padding from .sidebar or .list-group if defined elsewhere, or add styles here */
+    background-color: #f8f9fa; /* Example background */
+    padding: 1rem;
+    border-right: 1px solid #dee2e6; /* Example border */
+    height: calc(100vh - 56px); /* Example: Adjust based on header height */
+    overflow-y: auto; /* Allow sidebar scrolling if content exceeds height */
+}
+
+#filemanage-content {
+    flex-grow: 1; /* Take remaining width */
+    padding: 1.5rem; /* Padding for content area */
+    overflow-y: auto; /* Allow content area scrolling if needed */
+    height: calc(100vh - 56px); /* Match sidebar height */
+}
+
+/* Sidebar link styling (assuming Bootstrap list-group is used) */
+#filemanage-sidebar .list-group-item {
+    border-radius: 0.25rem; /* Example rounding */
+    margin-bottom: 0.5rem; /* Spacing between links */
+    border: none; /* Remove default list-group borders if needed */
+    padding: 0.75rem 1rem;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth transition */
+}
+
+/* Active sidebar link style */
+#filemanage-sidebar .list-group-item.active {
+    background-color: #0d6efd; /* Bootstrap primary blue */
+    color: #fff;
+    font-weight: bold;
+}
+#filemanage-sidebar .list-group-item:not(.active):hover {
+    background-color: #e9ecef; /* Light hover effect */
+    color: #000;
+}
+
+
+/* -------------------------
+   Content Section Styles
+   ------------------------- */
+.content-section {
+    display: none; /* Hide sections by default */
+    animation: fadeIn 0.5s ease-in-out; /* Simple fade-in animation */
+}
+
+.content-section.active-section {
+    display: block; /* Show the active section */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.section-title {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+    font-size: 1.5rem; /* Adjust title size */
+    color: #343a40;
+}
+
+
+/* -------------------------
+   Table Styles
+   ------------------------- */
+
+.table-container {
+    /* Set a maximum height for the table area */
+    /* Adjust this value based on your layout and desired table height */
+    max-height: calc(100vh - 280px); /* Example: Adjust based on header, padding, controls height */
+    overflow-y: auto; /* Enable vertical scrolling WITHIN the container */
+    border: 1px solid #dee2e6; /* Optional: Add border around the scrollable area */
+    border-radius: 0.25rem;
+}
+
+/* Apply fixed layout and prevent horizontal scroll */
+#decrypted-files-table,
+#pending-files-table {
+    table-layout: fixed; /* Crucial for preventing content from expanding columns */
+    width: 100%;       /* Ensure table takes full container width */
+    word-wrap: break-word; /* Break long words/paths */
+}
+
+/* Define column widths to distribute space and prevent overflow */
+/* Adjust percentages based on expected content length */
+
+/* Decrypted Files Table Column Widths */
+#decrypted-files-table th:nth-child(1), /* Filename */
+#decrypted-files-table td:nth-child(1) {
+    width: 30%;
+}
+#decrypted-files-table th:nth-child(2), /* Relative Path */
+#decrypted-files-table td:nth-child(2) {
+    width: 35%;
+}
+#decrypted-files-table th:nth-child(3), /* Size */
+#decrypted-files-table td:nth-child(3) {
+    width: 10%;
+    text-align: right; /* Align size right */
+}
+#decrypted-files-table th:nth-child(4), /* Last Modified */
+#decrypted-files-table td:nth-child(4) {
+    width: 15%;
+}
+#decrypted-files-table th:nth-child(5), /* Actions */
+#decrypted-files-table td:nth-child(5) {
+    width: 10%;
+    text-align: center;
+}
+
+
+/* Pending Files Table Column Widths */
+#pending-files-table th:nth-child(1), /* Temp Filename */
+#pending-files-table td:nth-child(1) {
+    width: 25%;
+}
+#pending-files-table th:nth-child(2), /* Original Path */
+#pending-files-table td:nth-child(2) {
+    width: 30%;
+}
+#pending-files-table th:nth-child(3), /* Original Filename */
+#pending-files-table td:nth-child(3) {
+    width: 25%;
+}
+#pending-files-table th:nth-child(4), /* Size */
+#pending-files-table td:nth-child(4) {
+    width: 10%;
+    text-align: right; /* Align size right */
+}
+#pending-files-table th:nth-child(5), /* Last Modified */
+#pending-files-table td:nth-child(5) {
+    width: 10%;
+}
+
+/* Ensure table cells handle overflow */
+.table td, .table th {
+    overflow: hidden;         /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis (...) for overflow text */
+    white-space: nowrap;      /* Prevent text wrapping by default */
+}
+
+/* Allow path column to wrap if needed, but still use ellipsis if too long */
+#decrypted-files-table td:nth-child(2),
+#pending-files-table td:nth-child(2) {
+    /* white-space: normal; /* Allow wrapping for paths */
+    /* word-break: break-all; /* Break long paths aggressively */
+    /* Keep nowrap and ellipsis for consistency, adjust width if needed */
+}
+
+
+/* -------------------------
+   Row Removal Animation
+   ------------------------- */
+#pending-files-table tbody tr.removing {
+    opacity: 0;
+    /* Animate height collapse - might require setting initial height or using max-height */
+    /* A simpler approach is just fade out */
+    /* max-height: 0; */
+    /* padding-top: 0; */
+    /* padding-bottom: 0; */
+    /* border: none; */
+    transition: opacity 0.5s ease-out; /* Adjust timing as needed */
+    /* transition: opacity 0.5s ease-out, max-height 0.5s ease-out, padding 0.5s ease-out, border 0.5s ease-out; */
+}
+
+/* Optional: Style for download button */
+.btn-download {
+    /* Add specific styles if needed */
+}
+
+/* -------------------------
+   Sync Controls Styles
+   ------------------------- */
+.sync-controls {
+    /* Ensure controls don't wrap unnecessarily on smaller screens within the content area */
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    gap: 1rem; /* Add gap between status and buttons */
+}
+
+.sync-status-info span {
+    white-space: nowrap; /* Prevent status text from wrapping */
+}
+
+.sync-buttons button {
+    /* Ensure buttons have some minimum width or adjust layout */
+}
+

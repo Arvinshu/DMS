@@ -2,6 +2,9 @@ package org.ls.utils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +71,28 @@ public class DateUtils {
      * @return 格式化后的日期字符串，如果 date 为 null 则返回 null
      */
     public static String formatDateTime(Date date) {
+        if (date == null) {
+            return null;
+        }
         return formatDate(date, YYYY_MM_DD_HH_MM_SS);
     }
+
+
+    /**
+     * 将 LocalDateTime 日期对象格式化为 Date
+     *
+     * @param localDateTime 日期对象
+     * @return Date 格式化后的日期字符串，如果 date 为 null 则返回 null
+     */
+    public static Date convertlocalDateTimeToDate(LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return null;
+        }
+        Date date = Date.from( localDateTime.atZone( ZoneId.systemDefault()).toInstant());
+        return date;
+    }
+
+
 
     /**
      * 将日期对象格式化为默认日期格式 (yyyy-MM-dd) 的字符串

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/project.css}"> <link rel="stylesheet" th:href="@{/css/filemanage.css}"> <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
+</head>
+<body>
+<div class="app-container">
+
+    <div th:replace="~{fragments/header :: navbar}"></div>
+
+    <div class="main-content-wrapper">
+
+        <div id="filemanage-sidebar" class="sidebar list-group">
+            <a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">
+                <i class="fas fa-search"></i> 文档查询下载 </a>
+            <a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
+                <i class="fas fa-sync-alt"></i> 文档同步管理 </a>
+        </div>
+
+        <div id="filemanage-content" class="main-content">
+
+            <div id="query-download-section" class="content-section active-section">
+                <h2 class="section-title">文档查询下载</h2>
+
+                <div class="filter-controls mb-3">
+                    <input type="text" id="query-keyword" class="form-control d-inline-block w-auto" placeholder="输入文件名关键字...">
+                    <button id="query-btn" class="btn btn-primary ms-2">查询</button>
+                </div>
+
+                <div id="decrypted-table-container" class="table-container">
+                    <table id="encrypted-files-table" class="table table-striped table-bordered table-hover">
+                        <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>相对路径</th>
+                            <th>大小</th>
+                            <th>最后修改日期</th>
+                            <th>操作</th> </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="encrypted-pagination" class="pagination-container mt-3">
+                    <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#query-download-section')}"></div>
+                </div>
+            </div>
+
+            <div id="sync-management-section" class="content-section">
+                <h2 class="section-title">文档同步管理</h2>
+
+                <div class="sync-controls mb-3 d-flex justify-content-between align-items-center">
+                    <div class="sync-status-info">
+                        <span class="me-3">待同步文件: <strong id="pending-sync-count">0</strong></span>
+                        <span class="me-3">同步状态: <strong id="sync-process-status">空闲</strong></span>
+                        <span class="me-3">本次成功: <strong id="sync-success-count">0</strong></span>
+                        <span>本次失败: <strong id="sync-fail-count">0</strong></span>
+                    </div>
+                    <div class="sync-buttons">
+                        <button id="start-sync-btn" class="btn btn-success me-2">开始同步</button>
+                        <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button> <button id="stop-sync-btn" class="btn btn-danger" disabled>停止</button> </div>
+                </div>
+
+                <div id="pending-table-container" class="table-container">
+                    <table id="pending-files-table" class="table table-striped table-bordered table-hover">
+                        <thead>
+                        <tr>
+                            <th>临时文件名</th>
+                            <th>原始路径</th>
+                            <th>原始文件名</th>
+                            <th>大小</th>
+                            <th>最后修改日期</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="pending-pagination" class="pagination-container mt-3">
+                    <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#sync-management-section')}"></div>
+                </div>
+
+            </div>
+
+        </div> </div> </div> <div th:replace="~{fragments/scripts :: commonScripts}"></div>
+
+<script th:src="@{/js/filemanage/filemanage_api.js}"></script>
+<script th:src="@{/js/filemanage/filemanage_ui.js}"></script>
+<script th:src="@{/js/filemanage/filemanage_query.js}"></script>
+<script th:src="@{/js/filemanage/filemanage_sync.js}"></script>
+<script th:src="@{/js/filemanage/filemanage_main.js}"></script>
+
+</body>
+</html>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ls.mapper.FileSyncMapMapper">
+
+    <resultMap id="BaseResultMap" type="org.ls.entity.FileSyncMap">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="relative_dir_path" property="relativeDirPath" jdbcType="VARCHAR"/>
+        <result column="original_filename" property="originalFilename" jdbcType="VARCHAR"/>
+        <result column="temp_filename" property="tempFilename" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="last_updated" property="lastUpdated" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, relative_dir_path, original_filename, temp_filename, status, last_updated
+    </sql>
+
+    <insert id="insert" parameterType="org.ls.entity.FileSyncMap" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO file_sync_map (relative_dir_path, original_filename, temp_filename, status, last_updated)
+        VALUES (#{relativeDirPath,jdbcType=VARCHAR}, #{originalFilename,jdbcType=VARCHAR},
+                #{tempFilename,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, NOW())
+    </insert>
+
+    <update id="updateStatusById">
+        UPDATE file_sync_map
+        SET status = #{status,jdbcType=VARCHAR},
+            last_updated = NOW()
+        WHERE id = #{id,jdbcType=BIGINT}
+    </update>
+
+    <update id="updateStatusByTempFilename">
+        UPDATE file_sync_map
+        SET status = #{status,jdbcType=VARCHAR},
+            last_updated = NOW()
+        WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateStatusForIds">
+        UPDATE file_sync_map
+        SET status = #{status,jdbcType=VARCHAR},
+        last_updated = NOW()
+        WHERE id IN
+        <foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM file_sync_map WHERE id = #{id,jdbcType=BIGINT}
+    </delete>
+
+    <delete id="deleteByTempFilename">
+        DELETE FROM file_sync_map WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
+    </delete>
+
+    <delete id="deleteBySourcePath">
+        DELETE FROM file_sync_map
+        WHERE relative_dir_path = #{relativeDirPath,jdbcType=VARCHAR}
+          AND original_filename = #{originalFilename,jdbcType=VARCHAR}
+    </delete>
+
+    <delete id="deleteByRelativePathPrefix">
+        DELETE FROM file_sync_map
+        WHERE relative_dir_path LIKE #{relativeDirPathPrefix,jdbcType=VARCHAR} || '%'
+    </delete>
+
+    <select id="selectBySourcePath" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM file_sync_map
+        WHERE relative_dir_path = #{relativeDirPath,jdbcType=VARCHAR}
+        AND original_filename = #{originalFilename,jdbcType=VARCHAR}
+        LIMIT 1
+    </select>
+
+    <select id="selectByTempFilename" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM file_sync_map
+        WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
+        LIMIT 1
+    </select>
+
+    <select id="selectByStatus" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM file_sync_map
+        WHERE status = #{status,jdbcType=VARCHAR}
+        ORDER BY last_updated ASC -- 按更新时间排序，可选
+    </select>
+
+    <select id="selectByRelativePathPrefix" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM file_sync_map
+        WHERE relative_dir_path LIKE #{relativeDirPathPrefix,jdbcType=VARCHAR} || '%'
+    </select>
+
+    <select id="existsByTempFilename" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM file_sync_map WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
+        )
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(*)
+        FROM file_sync_map
+        WHERE status = #{status,jdbcType=VARCHAR}
+    </select>
+
+    <select id="selectAndLockPending" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM file_sync_map
+        WHERE status = 'pending_sync'
+        ORDER BY last_updated ASC -- 优先处理旧的记录
+        LIMIT #{limit}
+        FOR UPDATE SKIP LOCKED -- PostgreSQL 行锁，跳过已被其他事务锁定的行
+    </select>
+
+</mapper>

@@ -147,6 +147,22 @@ public class PageController {
     }
 
 
+    /**
+     * 路由到文件管理页面
+     * @param model Model object
+     * @param request HttpServletRequest object
+     * @return filemanage 视图名称
+     */
+    @GetMapping("/filemanage")
+    public String fileManage(Model model, HttpServletRequest request) {
+        String currentURI = request.getRequestURI();
+        log.info("Rendering /filemanage, requestURI: {}", currentURI);
+        // Add common attributes needed by fragments (header, footer, etc.)
+        model.addAttribute("requestURI", currentURI); // 用于导航和侧边栏高亮
+        return "filemanage"; // Corresponds to src/main/resources/templates/filemanage.html
+    }
+
+
     // 如果将来添加了其他需要包含公共 header 的页面，
     // 对应的 Controller 方法也应该按照类似的方式注入 HttpServletRequest
     // 并将 request.getRequestURI() 添加到 Model 中。
