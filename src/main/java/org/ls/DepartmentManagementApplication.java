@@ -3,11 +3,13 @@ package org.ls;
 import org.mybatis.spring.annotation.MapperScan; // 引入 MapperScan
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Spring Boot 主应用程序启动类
  * 文件路径: src/main/java/org/ls/DepartmentManagementApplication.java
  */
+@EnableScheduling
 @SpringBootApplication // 组合了 @Configuration, @EnableAutoConfiguration, @ComponentScan
 @MapperScan("org.ls.mapper") // 指定 MyBatis Mapper 接口所在的包
 public class DepartmentManagementApplication {

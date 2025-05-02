@@ -1,7 +1,7 @@
 /**
  * 目录: src/main/java/org/ls/controller/api/FileManageApiController.java
  * 文件名: FileManageApiController.java
- * 开发时间: 2025-04-29 10:14:20 EDT
+ * 开发时间: 2025-04-30 14:35:10 EDT (Update: Added confirm-delete endpoint)
  * 作者: Gemini
  * 用途: 提供文件管理和同步相关的 RESTful API 端点。
  */
@@ -11,17 +11,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.ls.dto.*;
 import org.ls.service.FileManagementService;
 import org.ls.service.FileSyncService;
-import org.ls.utils.StringUtils; // Assuming custom StringUtils for validation if needed
+// import org.ls.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils; // Import CollectionUtils
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileNotFoundException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List; // Import List
+import java.util.Map; // Import Map for simple response
 
 @RestController
 @RequestMapping("/api/filemanage")
@@ -145,6 +148,38 @@ public class FileManageApiController {
 
 
     // --- File Sync Management Endpoints ---
+
+    // --- NEW Endpoint for Confirming Deletions ---
+
+    /**
+     * 确认并删除标记为 'pending_deletion' 的文件记录。
+     * @param idsToDelete 包含要确认删除的记录 ID 的列表 (来自请求体)
+     * @return 成功或失败的响应
+     */
+    @PostMapping("/sync/confirm-delete")
+    public ResponseEntity<?> confirmAndDeleteSyncRecords(@RequestBody List<Long> idsToDelete) {
+        log.info("API 请求: 确认删除 {} 条同步记录。", idsToDelete != null ? idsToDelete.size() : 0);
+
+        // 基本验证
+        if (CollectionUtils.isEmpty(idsToDelete)) {
+            log.warn("确认删除请求收到的 ID 列表为空。");
+            // 返回 Bad Request 或 OK 但带消息
+            return ResponseEntity.badRequest().body(Map.of("message", "需要提供要删除的记录 ID。"));
+        }
+
+        try {
+            // 调用 Service 层处理删除逻辑
+            fileSyncService.confirmAndDeleteFiles(idsToDelete);
+            log.info("已成功处理 ID 列表的删除确认请求: {}", idsToDelete);
+            // 返回成功响应 (可以包含更详细的结果，如果 Service 返回的话)
+            return ResponseEntity.ok(Map.of("message", "删除确认请求已处理。"));
+        } catch (Exception e) {
+            // 捕获 Service 层可能抛出的异常
+            log.error("处理删除确认请求时发生错误: IDs={}", idsToDelete, e);
+            // 返回服务器内部错误
+            return ResponseEntity.internalServerError().body(Map.of("message", "处理删除请求时发生内部错误。"));
+        }
+    }
 
     /**
      * 获取待同步的文件列表（分页）

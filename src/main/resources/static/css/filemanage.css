@@ -208,3 +208,57 @@
     /* Ensure buttons have some minimum width or adjust layout */
 }
 
+/**
+ * 目录: src/main/resources/static/css/filemanage.css
+ * 文件名: filemanage.css
+ * 开发时间: 2025-04-30 14:45:40 EDT (Update: Added styles for pending deletion rows)
+ * 作者: Gemini
+ * 用途: 文件管理页面 (filemanage.html) 的特定样式。
+ */
+
+/* ... (之前的布局、表格、动画等样式保持不变) ... */
+
+/* -------------------------
+   Pending Deletion Row Style
+   ------------------------- */
+#pending-files-table tbody tr.pending-deletion-row {
+    background-color: #fee2e2; /* 淡红色背景 (类似 Tailwind red-100) */
+    color: #7f1d1d; /* 深红色文字 (类似 Tailwind red-900) */
+}
+
+#pending-files-table tbody tr.pending-deletion-row:hover {
+    background-color: #fecaca; /* 悬停时稍深的红色 (类似 Tailwind red-200) */
+}
+
+/* 可选：为待删除行添加删除线 */
+/*
+#pending-files-table tbody tr.pending-deletion-row td {
+    text-decoration: line-through;
+}
+*/
+
+/* 确认删除按钮样式 (如果需要覆盖 btn-danger) */
+.btn-confirm-delete {
+    /* 可以添加特定样式 */
+}
+
+/* 确保操作列有足够宽度容纳按钮 */
+#pending-files-table th:last-child,
+#pending-files-table td:last-child {
+    width: 12%; /* 稍微增加宽度 */
+    text-align: center; /* 居中按钮 */
+}
+
+/* 调整其他列的宽度以适应新的操作列 */
+#pending-files-table th:nth-child(1), /* Temp Filename */
+#pending-files-table td:nth-child(1) { width: 22%; }
+#pending-files-table th:nth-child(2), /* Original Path */
+#pending-files-table td:nth-child(2) { width: 28%; }
+#pending-files-table th:nth-child(3), /* Original Filename */
+#pending-files-table td:nth-child(3) { width: 22%; }
+#pending-files-table th:nth-child(4), /* Size */
+#pending-files-table td:nth-child(4) { width: 8%; text-align: right; }
+#pending-files-table th:nth-child(5), /* Status */
+#pending-files-table td:nth-child(5) { width: 8%; }
+
+

@@ -11,34 +11,36 @@
         <result column="temp_filename" property="tempFilename" jdbcType="VARCHAR"/>
         <result column="status" property="status" jdbcType="VARCHAR"/>
         <result column="last_updated" property="lastUpdated" jdbcType="TIMESTAMP"/>
+        <result column="source_last_modified" property="sourceLastModified" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, relative_dir_path, original_filename, temp_filename, status, last_updated
+        id, relative_dir_path, original_filename, temp_filename, status, last_updated, source_last_modified
     </sql>
 
     <insert id="insert" parameterType="org.ls.entity.FileSyncMap" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO file_sync_map (relative_dir_path, original_filename, temp_filename, status, last_updated)
+        INSERT INTO file_sync_map (relative_dir_path, original_filename, temp_filename, status,
+                                   last_updated, source_last_modified)
         VALUES (#{relativeDirPath,jdbcType=VARCHAR}, #{originalFilename,jdbcType=VARCHAR},
-                #{tempFilename,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, NOW())
+                #{tempFilename,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+                NOW(), #{sourceLastModified,jdbcType=TIMESTAMP})
     </insert>
 
     <update id="updateStatusById">
         UPDATE file_sync_map
-        SET status = #{status,jdbcType=VARCHAR},
+        SET status       = #{status,jdbcType=VARCHAR},
             last_updated = NOW()
         WHERE id = #{id,jdbcType=BIGINT}
     </update>
 
     <update id="updateStatusByTempFilename">
         UPDATE file_sync_map
-        SET status = #{status,jdbcType=VARCHAR},
+        SET status       = #{status,jdbcType=VARCHAR},
             last_updated = NOW()
         WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
     </update>
 
-    <update id="updateStatusForIds">
-        UPDATE file_sync_map
+    <update id="batchUpdateStatus">UPDATE file_sync_map
         SET status = #{status,jdbcType=VARCHAR},
         last_updated = NOW()
         WHERE id IN
@@ -47,72 +49,93 @@
         </foreach>
     </update>
 
+    <update id="updateStatusAndTimestampsById">
+        UPDATE file_sync_map
+        SET status               = #{status,jdbcType=VARCHAR},
+            source_last_modified = #{sourceLastModified,jdbcType=TIMESTAMP},
+            last_updated         = NOW()
+        WHERE id = #{id,jdbcType=BIGINT}
+    </update>
+
     <delete id="deleteById">
-        DELETE FROM file_sync_map WHERE id = #{id,jdbcType=BIGINT}
+        DELETE
+        FROM file_sync_map
+        WHERE id = #{id,jdbcType=BIGINT}
     </delete>
-
     <delete id="deleteByTempFilename">
-        DELETE FROM file_sync_map WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
+        DELETE
+        FROM file_sync_map
+        WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
     </delete>
-
     <delete id="deleteBySourcePath">
-        DELETE FROM file_sync_map
+        DELETE
+        FROM file_sync_map
         WHERE relative_dir_path = #{relativeDirPath,jdbcType=VARCHAR}
           AND original_filename = #{originalFilename,jdbcType=VARCHAR}
     </delete>
-
     <delete id="deleteByRelativePathPrefix">
-        DELETE FROM file_sync_map
+        DELETE
+        FROM file_sync_map
         WHERE relative_dir_path LIKE #{relativeDirPathPrefix,jdbcType=VARCHAR} || '%'
     </delete>
 
     <select id="selectBySourcePath" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM file_sync_map
         WHERE relative_dir_path = #{relativeDirPath,jdbcType=VARCHAR}
         AND original_filename = #{originalFilename,jdbcType=VARCHAR}
         LIMIT 1
     </select>
-
     <select id="selectByTempFilename" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM file_sync_map
         WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
         LIMIT 1
     </select>
-
     <select id="selectByStatus" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM file_sync_map
         WHERE status = #{status,jdbcType=VARCHAR}
-        ORDER BY last_updated ASC -- 按更新时间排序，可选
+        ORDER BY last_updated ASC
     </select>
-
     <select id="selectByRelativePathPrefix" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM file_sync_map
         WHERE relative_dir_path LIKE #{relativeDirPathPrefix,jdbcType=VARCHAR} || '%'
     </select>
-
     <select id="existsByTempFilename" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1 FROM file_sync_map WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR}
-        )
+        SELECT EXISTS (SELECT 1 FROM file_sync_map WHERE temp_filename = #{tempFilename,jdbcType=VARCHAR})
     </select>
-
     <select id="countByStatus" resultType="long">
         SELECT COUNT(*)
         FROM file_sync_map
         WHERE status = #{status,jdbcType=VARCHAR}
     </select>
-
     <select id="selectAndLockPending" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM file_sync_map
         WHERE status = 'pending_sync'
-        ORDER BY last_updated ASC -- 优先处理旧的记录
+        ORDER BY last_updated ASC
         LIMIT #{limit}
-        FOR UPDATE SKIP LOCKED -- PostgreSQL 行锁，跳过已被其他事务锁定的行
+        FOR UPDATE SKIP LOCKED
+    </select>
+
+    <select id="selectAllRelevantForScan" resultMap="BaseResultMap">
+        SELECT id,
+               relative_dir_path,
+               original_filename,
+               source_last_modified,
+               status
+        FROM file_sync_map
+        WHERE status != 'pending_deletion'
+        -- 排除已标记为待删除的记录
+        -- 可以根据需要添加更多过滤条件，例如排除 'error_copying'
+        -- WHERE status NOT IN ('pending_deletion', 'error_copying')
     </select>
 
 </mapper>

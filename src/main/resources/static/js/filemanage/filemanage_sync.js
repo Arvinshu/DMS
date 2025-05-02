@@ -31,17 +31,21 @@ const fileManageSync = (() => {
      * @param {number} page - 要加载的页码 (从 1 开始)。
      */
     const loadPendingFiles = (page) => {
-        currentPage = page; // Update current page state
-        console.log(`Sync Module: Loading pending files: page=${page}`);
+        currentPage = page;
+        console.log(`Sync Module: Loading pending/deletion files: page=${page}`);
         // Add loading indicator
+        if (pendingTableBody) pendingTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">加载中...</td></tr>'; // Colspan updated to 6
+
         fileManageApi.getPendingFiles(page, pageSize)
             .then(pageDto => {
-                fileManageUI.updatePendingFilesTable(pageDto, loadPendingFiles); // Pass self for pagination
+                // Pass self for pagination callback
+                fileManageUI.updatePendingFilesTable(pageDto, loadPendingFiles);
             })
             .catch(error => {
                 console.error('Sync Module: Error loading pending files:', error);
-                alert(`加载待同步文件列表失败: ${error.message}`);
-                fileManageUI.updatePendingFilesTable({ content: [], pageNumber: 1, totalPages: 0, totalElements: 0 }, loadPendingFiles); // Clear table
+                alert(`加载待处理文件列表失败: ${error.message}`);
+                if (pendingTableBody) pendingTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">加载失败</td></tr>'; // Colspan updated
+                fileManageUI.updatePendingFilesTable(null, loadPendingFiles); // Clear pagination
             });
         // Remove loading indicator
     };
@@ -183,18 +187,63 @@ const fileManageSync = (() => {
      */
     const handlePaginationClick = (event) => {
         const target = event.target;
-        // Check if a page link inside the correct pagination container was clicked
-        if (target.tagName === 'A' && target.closest('.pagination') === pendingPaginationContainer.querySelector('.pagination')) {
-            event.preventDefault();
-            const pageNum = target.dataset.page;
-            if (pageNum && !target.parentElement.classList.contains('disabled') && !target.parentElement.classList.contains('active')) {
-                const page = parseInt(pageNum, 10);
-                if (page !== currentPage) { // Load only if page changed
-                    loadPendingFiles(page);
+        const paginationNav = target.closest('.pagination');
+        if (paginationNav && pendingPaginationContainer && pendingPaginationContainer.contains(paginationNav)) {
+            if (target.tagName === 'A' || target.tagName === 'BUTTON') {
+                event.preventDefault();
+                const pageNum = target.dataset.page;
+                if (pageNum && !target.disabled && !target.closest('li')?.classList.contains('disabled') && !target.closest('li')?.classList.contains('active')) {
+                    const page = parseInt(pageNum, 10);
+                    if (page !== currentPage) {
+                        loadPendingFiles(page);
+                    }
                 }
             }
         }
-        // Add handling for buttons if using button-based pagination
+    };
+
+    /**
+     * 处理确认删除按钮点击事件 (事件委托)。
+     * @param {Event} event - 点击事件对象。
+     */
+    const handleConfirmDeleteDelegation = (event) => {
+        // 检查点击的是否是确认删除按钮
+        if (event.target && event.target.classList.contains('btn-confirm-delete')) {
+            const button = event.target;
+            const recordId = button.dataset.id; // 从按钮获取记录 ID
+
+            if (recordId) {
+                // 弹出确认对话框
+                if (window.confirm(`您确定要永久删除这个文件记录及其对应的解密文件吗？此操作不可恢复。`)) {
+                    console.log(`Sync Module: User confirmed deletion for record ID: ${recordId}`);
+                    // 禁用按钮防止重复点击
+                    button.disabled = true;
+                    button.textContent = '删除中...';
+
+                    // 调用 API 发送删除请求 (注意：API 期望一个数组)
+                    fileManageApi.confirmDelete([parseInt(recordId, 10)]) // 将 ID 转为数字并放入数组
+                        .then(response => {
+                            console.log(`Sync Module: Deletion API response for ID ${recordId}:`, response);
+                            alert(response.message || `记录 ID ${recordId} 删除成功。`);
+                            // 从 UI 移除该行
+                            fileManageUI.removePendingTableRow(recordId);
+                            // 可选：立即更新状态计数，或等待下一次轮询
+                            updateSyncStatus();
+                        })
+                        .catch(error => {
+                            console.error(`Sync Module: Error confirming delete for record ID ${recordId}:`, error);
+                            alert(`删除记录 ID ${recordId} 失败: ${error.message}`);
+                            // 重新启用按钮
+                            button.disabled = false;
+                            button.textContent = '确认删除';
+                        });
+                } else {
+                    console.log(`Sync Module: User cancelled deletion for record ID: ${recordId}`);
+                }
+            } else {
+                console.error("无法获取要删除的记录 ID。");
+            }
+        }
     };
 
     // --- Initialization ---
@@ -204,16 +253,21 @@ const fileManageSync = (() => {
         if (pauseResumeSyncBtn) pauseResumeSyncBtn.addEventListener('click', handlePauseResumeSync);
         if (stopSyncBtn) stopSyncBtn.addEventListener('click', handleStopSync);
 
-        // Add delegated listener for pagination
+        // 绑定分页事件委托
         if (pendingPaginationContainer) {
-            // Ensure listener is added only once by main module or here
-            // pendingPaginationContainer.removeEventListener('click', handlePaginationClick);
-            // pendingPaginationContainer.addEventListener('click', handlePaginationClick);
+            pendingPaginationContainer.removeEventListener('click', handlePaginationClick);
+            pendingPaginationContainer.addEventListener('click', handlePaginationClick);
         }
 
-        // Initial load and status check
+        // 绑定确认删除按钮的事件委托到表格主体
+        if (pendingTableBody) {
+            pendingTableBody.removeEventListener('click', handleConfirmDeleteDelegation); // 移除旧的（如果有）
+            pendingTableBody.addEventListener('click', handleConfirmDeleteDelegation); // 添加新的
+        }
+
+        // 初始加载和状态检查
         loadPendingFiles(currentPage);
-        startSyncStatusPolling(); // Start polling status
+        startSyncStatusPolling();
 
         console.log('File Manage Sync Module Initialized.');
     };

@@ -32,7 +32,7 @@
                 </div>
 
                 <div id="decrypted-table-container" class="table-container">
-                    <table id="encrypted-files-table" class="table table-striped table-bordered table-hover">
+                    <table id="decrypted-files-table" class="table table-striped table-bordered table-hover">
                         <thead>
                         <tr>
                             <th>文件名</th>
@@ -41,12 +41,11 @@
                             <th>最后修改日期</th>
                             <th>操作</th> </tr>
                         </thead>
-                        <tbody>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
-                <div id="encrypted-pagination" class="pagination-container mt-3">
+                <div id="decrypted-pagination" class="pagination-container mt-3">
                     <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#query-download-section')}"></div>
                 </div>
             </div>

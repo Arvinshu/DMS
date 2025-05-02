@@ -15,29 +15,34 @@ const fileManageApi = (() => {
      * @param {Response} response - Fetch 响应对象
      * @returns {Promise<any>} - 解析后的 JSON 数据或在错误时 reject
      */
-    const handleResponse = (response) => {
+    const handleResponse = async (response) => { // Make async for potential text() fallback
         if (!response.ok) {
-            // 如果 HTTP 状态码表示错误，尝试解析错误信息
-            return response.json().then(errData => {
-                // 尝试从后端返回的结构中获取错误消息
-                const message = errData.message || errData.error || `HTTP error! status: ${response.status}`;
-                console.error('API Error:', message, errData);
-                return Promise.reject(new Error(message)); // Reject promise with error message
-            }).catch(() => {
-                // 如果无法解析 JSON 或没有错误信息，则抛出通用错误
-                console.error('API Error: HTTP status', response.status);
-                return Promise.reject(new Error(`HTTP error! status: ${response.status}`));
-            });
+            let errorData = {};
+            let message = `HTTP error! status: ${response.status}`;
+            try {
+                // Try to parse JSON error first
+                errorData = await response.json();
+                message = errorData.message || errorData.error || message;
+            } catch (e) {
+                // If JSON parsing fails, try to get text response
+                try {
+                    const textResponse = await response.text();
+                    if (textResponse) message = textResponse;
+                } catch (textErr) {
+                    // Ignore text parsing error
+                }
+            }
+            console.error('API Error:', message, errorData);
+            return Promise.reject(new Error(message));
         }
-        // 检查 Content-Type 是否为 JSON
+        // Handle successful responses (2xx)
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
-            return response.json(); // 解析 JSON 数据
+            return response.json();
         } else {
-            // 对于非 JSON 响应 (例如文件下载)，直接返回响应对象
-            // 注意：下载处理不在此函数中，调用者需要处理 Blob 或其他格式
-            // 或者对于不需要响应体的 POST 请求，返回成功状态
-            return Promise.resolve({ success: true, status: response.status }); // Indicate success for non-JSON ok responses
+            // For non-JSON success responses (like simple OK for delete), resolve successfully
+            // Could also check for specific status codes like 204 No Content
+            return Promise.resolve({ success: true, status: response.status });
         }
     };
 
@@ -180,6 +185,23 @@ const fileManageApi = (() => {
         return post('/sync/stop');
     };
 
+    // --- NEW: Confirm Delete API Function ---
+    /**
+     * 发送确认删除请求到后端。
+     * @param {number[]} ids - 包含要删除记录 ID 的数组。
+     * @returns {Promise<object>} - 后端返回的简单成功或错误对象。
+     */
+    const confirmDelete = (ids) => {
+        // Ensure ids is an array
+        if (!Array.isArray(ids)) {
+            return Promise.reject(new Error("确认删除需要一个 ID 数组。"));
+        }
+        if (ids.length === 0) {
+            return Promise.resolve({ success: true, message: "没有需要删除的 ID。" }); // Nothing to delete
+        }
+        return post('/sync/confirm-delete', ids); // Send IDs in the request body
+    };
+
     // --- Public Interface ---
     return {
         searchDecryptedFiles,
@@ -191,7 +213,8 @@ const fileManageApi = (() => {
         startSync,
         pauseSync,
         resumeSync,
-        stopSync
+        stopSync,
+        confirmDelete // Expose the new function
     };
 
 })(); // Immediately Invoked Function Expression (IIFE) to create a module scope

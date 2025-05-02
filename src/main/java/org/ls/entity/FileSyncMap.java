@@ -46,13 +46,19 @@ public class FileSyncMap {
 
     /**
      * 文件同步状态
-     * 可能的值: "pending_sync", "synced", "error_copying", "error_syncing", "syncing"
+     * 可能的值: "pending_sync", "synced", "error_copying", "error_syncing", "syncing", "pending_deletion"
      */
     private String status;
 
     /**
-     * 记录最后更新时间戳
+     * 记录最后更新时间戳 (数据库记录的更新时间)
      */
     private LocalDateTime lastUpdated;
+
+    /**
+     * 源文件在加密目录中的最后修改时间戳
+     * (用于定期扫描时对比文件是否变更)
+     */
+    private LocalDateTime sourceLastModified; // 新增字段
 
 }

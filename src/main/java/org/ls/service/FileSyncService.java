@@ -1,9 +1,9 @@
 /**
  * 目录: src/main/java/org/ls/service/FileSyncService.java
  * 文件名: FileSyncService.java
- * 开发时间: 2025-04-29 10:08:10 EDT
+ * 开发时间: 2025-04-30 14:25:10 EDT (Update: Added performFullScan method signature)
  * 作者: Gemini
- * 用途: 文件同步服务接口，定义后台监控管理、状态查询、待同步文件查询以及手动同步控制操作。
+ * 用途: 文件同步服务接口，定义后台监控管理、状态查询、待同步文件查询、手动同步控制以及定时全量扫描操作。
  */
 package org.ls.service;
 
@@ -11,6 +11,8 @@ import org.ls.dto.FileSyncStatusDto;
 import org.ls.dto.FileSyncTaskControlResultDto;
 import org.ls.dto.PageDto;
 import org.ls.dto.PendingFileSyncDto;
+
+import java.util.List; // Import List
 
 public interface FileSyncService {
 
@@ -61,6 +63,22 @@ public interface FileSyncService {
      * @return 操作结果 DTO
      */
     FileSyncTaskControlResultDto stopManualSync();
+
+    /**
+     * 执行一次对加密源目录的全量扫描，与数据库记录进行对比并同步状态。
+     * 通常由 @Scheduled 定时任务调用，但也允许手动触发。
+     * 此方法应异步执行以避免阻塞。
+     */
+    void performFullScan(); // 新增方法
+
+    /**
+     * (新增) 处理用户确认删除的文件。
+     *
+     * @param idsToConfirm 需要确认删除的记录 ID 列表
+     * @return 操作结果，例如包含成功和失败信息的 DTO (暂定 void)
+     */
+    void confirmAndDeleteFiles(List<Long> idsToConfirm); // 新增方法 (为阶段二准备)
+
 
     // 后台监控的启动和停止通过 Spring Bean 生命周期管理 (PostConstruct/PreDestroy)
     // 因此不需要显式的 start/stop monitoring 方法。

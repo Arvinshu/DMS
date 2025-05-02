@@ -50,3 +50,10 @@ INSERT INTO file_sync_map (relative_dir_path, original_filename, temp_filename, 
 -- 5. 删除表 (注释掉，需要时取消注释)
 -- DROP TABLE IF EXISTS file_sync_map;
 
+
+
+ALTER TABLE file_sync_map
+    ADD COLUMN source_last_modified TIMESTAMP NULL; -- 允许初始为 NULL
+
+-- 为新列添加注释
+COMMENT ON COLUMN file_sync_map.source_last_modified IS '源文件在加密目录中的最后修改时间戳';
