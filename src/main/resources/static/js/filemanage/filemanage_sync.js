@@ -20,7 +20,7 @@ const fileManageSync = (() => {
 
     // --- State ---
     let currentPage = 1;
-    const pageSize = 10; // Or get from config/UI
+    const pageSize = 100; // Or get from config/UI
     let syncStatusIntervalId = null;
     const SYNC_STATUS_POLL_INTERVAL = 5000; // Poll every 5 seconds
 

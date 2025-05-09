@@ -78,27 +78,126 @@
 }
 
 /* --- 搜索栏 --- */
+/* ========================
+   项目搜索栏样式升级
+   ======================== */
 #project-search-bar {
-    display: flex; /* Flex 布局 */
-    flex-wrap: wrap; /* 允许换行 */
-    gap: 0.5rem; /* 元素间距 */
-    align-items: center; /* 垂直居中对齐 */
+    gap: 1rem; /* 增加元素间距 */
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 2rem !important;
 }
 
+/* --- 输入框统一样式 --- */
 #project-search-bar .form-input,
 #project-search-bar .form-select,
 #project-search-bar .form-multiselect {
-    min-width: 150px; /* 最小宽度 */
-    flex: 1 1 150px; /* Flex 弹性布局 */
-    font-size: 0.875rem; /* 字体大小 */
-    padding-top: 0.4rem; /* 上内边距 */
-    padding-bottom: 0.4rem; /* 下内边距 */
+    height: 42px;
+    min-width: 180px;
+    flex: 1 1 auto;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px !important;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+    background: #ffffff;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
 }
 
+/* --- 下拉框聚焦状态 --- */
+#project-search-bar .form-select:focus,
+#project-search-bar .form-multiselect:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.15);
+}
+
+/* --- 多选下拉特殊样式 --- */
 #project-search-bar .form-multiselect {
-    height: auto; /* 高度自适应 */
-    min-height: calc(1.5em + 0.8rem + 2px); /* 最小高度，与单行输入框对齐 */
-    padding: 0.4rem 0.75rem; /* 内边距 */
+    padding: 0.5rem 1rem;
+    background-image: none;
+    min-height: 42px;
+}
+
+/* --- 按钮统一样式 --- */
+#search-project-btn,
+#add-project-btn {
+    height: 42px;
+    padding: 0 2rem;
+    border-radius: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#search-project-btn {
+    background: linear-gradient(45deg, #3b82f6, #2563eb);
+    color: white;
+    box-shadow: 0 4px 6px rgba(59,130,246,0.2);
+}
+
+#add-project-btn {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 6px rgba(16,185,129,0.2);
+    margin-left: auto; /* 右侧对齐 */
+}
+
+/* --- 按钮交互效果 --- */
+#search-project-btn:hover,
+#add-project-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+#search-project-btn:active,
+#add-project-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* --- 输入元素悬停效果 --- */
+#project-search-bar .form-input:hover,
+#project-search-bar .form-select:hover,
+#project-search-bar .form-multiselect:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+/* --- 占位符样式 --- */
+#project-search-bar ::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+/* --- 下拉箭头美化 --- */
+#project-search-bar .form-select {
+    -webkit-appearance: none; /* 移除Webkit浏览器默认箭头 */
+    -moz-appearance: none;    /* 移除Firefox默认箭头 */
+    appearance: none;         /* 标准语法移除默认箭头 */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%233b82f6' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.5rem !important; /* 增加右侧留出箭头空间 */
+}
+
+/* 下拉箭头美化 针对Firefox的额外修正 */
+@-moz-document url-prefix() {
+    .form-select {
+        padding-right: 1.75rem !important;
+        background-position: right 0.5rem center !important;
+    }
+}
+
+/* 下拉箭头美化 移除Edge默认箭头 */
+::-ms-expand {
+    display: none;
 }
 
 /* --- 项目列表表格 --- */

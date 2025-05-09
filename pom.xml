@@ -15,7 +15,7 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>department-management</name>
     <description>部门工时管理系统 (Department Timesheet Management System)</description>
-
+    <packaging>jar</packaging>
     <properties>
         <java.version>21</java.version>
         <mybatis-spring-boot.version>3.0.4</mybatis-spring-boot.version>

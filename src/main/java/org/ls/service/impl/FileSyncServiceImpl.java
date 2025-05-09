@@ -92,7 +92,7 @@ public class FileSyncServiceImpl implements FileSyncService {
     private final AtomicReference<Future<?>> currentSyncTaskFuture = new AtomicReference<>(null); // 当前异步同步任务的 Future 对象
     private final AtomicInteger processedInCurrentRun = new AtomicInteger(0); // 当前运行轮次成功处理计数
     private final AtomicInteger failedInCurrentRun = new AtomicInteger(0); // 当前运行轮次失败处理计数
-    private static final int SYNC_BATCH_SIZE = 10; // 手动同步时每批处理的文件数量
+    private static final int SYNC_BATCH_SIZE = 100; // 手动同步时每批处理的文件数量
 
     // --- 状态常量定义 ---
     private static final String STATUS_PENDING = "pending_sync";         // 待同步

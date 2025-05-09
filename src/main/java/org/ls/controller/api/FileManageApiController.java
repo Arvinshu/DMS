@@ -21,7 +21,9 @@ import org.springframework.util.CollectionUtils; // Import CollectionUtils
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileNotFoundException;
+import java.net.URLDecoder; // 引入 URLDecoder
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets; // 引入 StandardCharsets
 import java.nio.charset.StandardCharsets;
 import java.util.List; // Import List
 import java.util.Map; // Import Map for simple response
@@ -74,27 +76,29 @@ public class FileManageApiController {
     public ResponseEntity<Resource> downloadDecryptedFile(
             @RequestParam String relativePath,
             @RequestParam String filename) {
-        log.debug("API Request: Download decrypted file. RelativePath: '{}', Filename: '{}'", relativePath, filename);
+        log.debug("API 请求: 下载解密文件。相对路径: '{}', 文件名: '{}'", relativePath, filename);
         try {
-            // URL Decoding is usually handled by Spring automatically, but double-check if issues arise.
-            // String decodedPath = URLDecoder.decode(relativePath, StandardCharsets.UTF_8);
-            // String decodedFilename = URLDecoder.decode(filename, StandardCharsets.UTF_8);
+            // --- 显式解码文件路径 ---
+            String decodedFilepath = URLDecoder.decode(relativePath, StandardCharsets.UTF_8);
+            log.debug("解码后的文件目录: '{}'", decodedFilepath);
 
-            Resource resource = fileManagementService.getDecryptedFileResource(relativePath, filename);
+            // --- 显式解码文件名 ---
+            String decodedFilename = URLDecoder.decode(filename, StandardCharsets.UTF_8);
+            log.debug("解码后的文件名: '{}'", decodedFilename);
 
-            // Encode filename for Content-Disposition header to handle special characters
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+            Resource resource = fileManagementService.getDecryptedFileResource(decodedFilepath, decodedFilename); // 传递解码后的文件名
+            String encodedFilenameDisposition = URLEncoder.encode(decodedFilename, StandardCharsets.UTF_8).replace("+", "%20"); // 对原始（解码后的）文件名进行编码用于 Content-Disposition
 
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM) // Set appropriate content type if known, otherwise use generic stream
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename) // RFC 5987 compliant
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilenameDisposition)
                     .body(resource);
         } catch (FileNotFoundException e) {
-            log.warn("File not found for download request: Path='{}', Filename='{}'", relativePath, filename, e);
+            log.warn("请求下载的解密文件未找到: Path='{}', Filename='{}' (Decoded='{}')", relativePath, filename, filename, e); // 日志中也记录解码尝试
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            log.error("Error preparing file download: Path='{}', Filename='{}'", relativePath, filename, e);
-            return ResponseEntity.internalServerError().build(); // Or handle specific exceptions
+            log.error("准备解密文件下载时出错: Path='{}', Filename='{}'", relativePath, filename, e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -105,14 +109,14 @@ public class FileManageApiController {
      * 搜索加密源目录中的文件（分页）
      * @param keyword 文件名关键字 (可选)
      * @param page 页码 (默认为 1)
-     * @param size 每页大小 (默认为 10)
+     * @param size 每页大小 (默认为 100)
      * @return 分页结果 DTO
      */
     @GetMapping("/encrypted/search") // New path
     public ResponseEntity<PageDto<DecryptedFileDto>> searchEncryptedFiles( // New method name
                                                                            @RequestParam(required = false, defaultValue = "") String keyword,
                                                                            @RequestParam(defaultValue = "1") int page,
-                                                                           @RequestParam(defaultValue = "10") int size) {
+                                                                           @RequestParam(defaultValue = "100") int size) {
         log.debug("API Request: Search ENCRYPTED files. Keyword: '{}', Page: {}, Size: {}", keyword, page, size);
         if (page < 1) page = 1; if (size < 1) size = 10; if (size > 100) size = 100;
         PageDto<DecryptedFileDto> result = fileManagementService.searchEncryptedFiles(keyword, page, size); // Call new service method
@@ -126,31 +130,50 @@ public class FileManageApiController {
      * @return 文件资源或 404 错误
      */
     @GetMapping("/encrypted/download") // New path
-    public ResponseEntity<Resource> downloadEncryptedFile( // New method name
-                                                           @RequestParam String relativePath,
-                                                           @RequestParam String filename) {
-        log.debug("API Request: Download ENCRYPTED file. RelativePath: '{}', Filename: '{}'", relativePath, filename);
+    public ResponseEntity<Resource> downloadEncryptedFile(
+            @RequestParam String relativePath,
+            @RequestParam String filename) {
+        log.debug("API 请求: 下载加密文件。相对路径: '{}', 原始文件名参数: '{}'", relativePath, filename);
         try {
-            Resource resource = fileManagementService.getEncryptedFileResource(relativePath, filename); // Call new service method
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+            // --- 显式解码文件目录和文件名 ---
+            // Spring 通常会自动解码 @RequestParam，但为了确保，我们再次解码。
+            // 如果 Spring 已经解码，重复解码通常不会出错（对非 %xx 字符无影响）。
+            String decodedFilepath = URLDecoder.decode(relativePath, StandardCharsets.UTF_8);
+            log.debug("解码后的加密文件路径: '{}'", decodedFilepath);
+
+            String decodedFilename = URLDecoder.decode(filename, StandardCharsets.UTF_8);
+            log.debug("解码后的加密文件名: '{}'", decodedFilename);
+
+            // 调用 Service 层，传递解码后的文件名
+            Resource resource = fileManagementService.getEncryptedFileResource(decodedFilepath, decodedFilename);
+
+            // 为 Content-Disposition 准备文件名，需要对原始（解码后的）文件名进行 URL 编码
+            String encodedFilenameDisposition = URLEncoder.encode(decodedFilename, StandardCharsets.UTF_8)
+                    // RFC 5987 建议将空格编码为 %20 而不是 +
+                    .replace("+", "%20");
+
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM) // Assume encrypted files are generic stream
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM) // 加密文件通常作为通用二进制流
+                    // 设置 Content-Disposition 头，让浏览器知道这是附件并使用正确的文件名
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilenameDisposition)
                     .body(resource);
         } catch (FileNotFoundException e) {
-            log.warn("Encrypted file not found for download request: Path='{}', Filename='{}'", relativePath, filename, e);
+            // 在日志中记录原始参数和尝试解码后的文件名
+            log.warn("请求下载的加密文件未找到: Path='{}', Original Filename Param='{}', Decoded Attempt='{}'",
+                    relativePath, filename, URLDecoder.decode(filename, StandardCharsets.UTF_8), e);
             return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            // 如果 URLDecoder.decode 失败 (例如无效的编码)
+            log.error("下载请求中的文件名参数解码失败: '{}'", filename, e);
+//            return ResponseEntity.badRequest().body(Map.of("message", "无效的文件名参数编码。"));
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            log.error("Error preparing encrypted file download: Path='{}', Filename='{}'", relativePath, filename, e);
+            log.error("准备加密文件下载时出错: Path='{}', Filename='{}'", relativePath, filename, e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
-
     // --- File Sync Management Endpoints ---
-
-    // --- NEW Endpoint for Confirming Deletions ---
-
     /**
      * 确认并删除标记为 'pending_deletion' 的文件记录。
      * @param idsToDelete 包含要确认删除的记录 ID 的列表 (来自请求体)
@@ -184,13 +207,13 @@ public class FileManageApiController {
     /**
      * 获取待同步的文件列表（分页）
      * @param page 页码 (默认为 1)
-     * @param size 每页大小 (默认为 10)
+     * @param size 每页大小 (默认为 100)
      * @return 分页结果 DTO
      */
     @GetMapping("/pending")
     public ResponseEntity<PageDto<PendingFileSyncDto>> getPendingFiles(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "100") int size) {
         log.debug("API Request: Get pending sync files. Page: {}, Size: {}", page, size);
         if (page < 1) page = 1;
         if (size < 1) size = 10;

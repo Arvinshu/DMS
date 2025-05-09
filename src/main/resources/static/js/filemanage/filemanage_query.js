@@ -17,7 +17,7 @@ const fileManageQuery = (() => {
 
     // --- State ---
     let currentPage = 1;
-    const pageSize = 10; // 每页显示数量
+    const pageSize = 100; // 每页显示数量
 
     // --- Core Functions ---
 

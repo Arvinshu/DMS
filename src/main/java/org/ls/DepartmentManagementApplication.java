@@ -21,8 +21,8 @@ public class DepartmentManagementApplication {
     public static void main(String[] args) {
         SpringApplication.run(DepartmentManagementApplication.class, args);
         System.out.println("(^_^) 部门管理系统启动成功 (^_^) ");
-        System.out.println("Swagger UI (if enabled): http://localhost:8080/swagger-ui/index.html"); // 假设端口是 8080
-        System.out.println("Application URL: http://localhost:8080/");
+        System.out.println("Swagger UI (if enabled): http://localhost/swagger-ui/index.html"); // 假设端口是 8080
+        System.out.println("Application URL: http://localhost/");
     }
 
 }

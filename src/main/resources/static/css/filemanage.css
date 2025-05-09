@@ -110,7 +110,7 @@
 /* Decrypted Files Table Column Widths */
 #decrypted-files-table th:nth-child(1), /* Filename */
 #decrypted-files-table td:nth-child(1) {
-    width: 30%;
+    width: 40%;
 }
 #decrypted-files-table th:nth-child(2), /* Relative Path */
 #decrypted-files-table td:nth-child(2) {
@@ -118,16 +118,17 @@
 }
 #decrypted-files-table th:nth-child(3), /* Size */
 #decrypted-files-table td:nth-child(3) {
-    width: 10%;
+    width: 5%;
     text-align: right; /* Align size right */
 }
 #decrypted-files-table th:nth-child(4), /* Last Modified */
 #decrypted-files-table td:nth-child(4) {
     width: 15%;
+    text-align: center; /* 居中按钮 */
 }
 #decrypted-files-table th:nth-child(5), /* Actions */
 #decrypted-files-table td:nth-child(5) {
-    width: 10%;
+    width: 5%;
     text-align: center;
 }
 
@@ -135,24 +136,32 @@
 /* Pending Files Table Column Widths */
 #pending-files-table th:nth-child(1), /* Temp Filename */
 #pending-files-table td:nth-child(1) {
-    width: 25%;
+    width: 30%;
 }
 #pending-files-table th:nth-child(2), /* Original Path */
 #pending-files-table td:nth-child(2) {
-    width: 30%;
+    width: 20%;
 }
 #pending-files-table th:nth-child(3), /* Original Filename */
 #pending-files-table td:nth-child(3) {
-    width: 25%;
+    width: 30%;
 }
 #pending-files-table th:nth-child(4), /* Size */
 #pending-files-table td:nth-child(4) {
-    width: 10%;
+    width: 5%;
     text-align: right; /* Align size right */
 }
-#pending-files-table th:nth-child(5), /* Last Modified */
+#pending-files-table th:nth-child(5), /* sync status */
 #pending-files-table td:nth-child(5) {
     width: 10%;
+    text-align: center;
+}
+
+/* 确保操作列有足够宽度容纳按钮 */
+#pending-files-table th:last-child,
+#pending-files-table td:last-child {
+    width: 5%; /* 稍微增加宽度 */
+    text-align: center; /* 居中按钮 */
 }
 
 /* Ensure table cells handle overflow */
@@ -189,23 +198,200 @@
 /* Optional: Style for download button */
 .btn-download {
     /* Add specific styles if needed */
+    height: 20px;
+    min-width: auto; /* 移除最小宽度限制 */
+    padding: 0 1rem;
+    border-radius: 10px !important;
+    background: linear-gradient(45deg, #3b82f6, #2563eb);
+    border: none;
+    color: white;
+    font-weight: 400;
+    /*text-transform: uppercase;*/
+    /*letter-spacing: 0.5px;*/
+    box-shadow: 0 4px 6px rgba(59,130,246,0.2);
+    box-sizing: border-box; /* 包含内边距 */
+    white-space: nowrap; /* 防止文字换行 */
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-download:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(59,130,246,0.25);
+    filter: brightness(1.08);
+}
+
+.btn-download:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+}
+
+/* 可选：添加加载状态 */
+.btn-download.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-download.loading::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* -------------------------
    Sync Controls Styles
    ------------------------- */
+/* ========================
+   同步状态面板样式升级
+   ======================== */
 .sync-controls {
-    /* Ensure controls don't wrap unnecessarily on smaller screens within the content area */
-    flex-wrap: wrap; /* Allow wrapping if needed */
-    gap: 1rem; /* Add gap between status and buttons */
+    background: #f8fafc;
+    padding: 1.25rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.sync-status-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.9);
+    border-radius: 8px;
+    border: 1px solid rgba(203,213,225,0.3);
 }
 
 .sync-status-info span {
-    white-space: nowrap; /* Prevent status text from wrapping */
+    font-size: 0.95rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sync-status-info strong {
+    color: #3b82f6;
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: center;
+    background: rgba(59,130,246,0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.sync-status-info span:nth-child(2) strong { /* 同步状态特殊样式 */
+    color: #10b981;
+    background: rgba(16,185,129,0.1);
+}
+
+/* ========================
+   同步控制按钮组升级
+   ======================== */
+.sync-buttons {
+    display: flex;
+    gap: 0.8rem;
+    position: relative;
 }
 
 .sync-buttons button {
-    /* Ensure buttons have some minimum width or adjust layout */
+    height: 42px;
+    min-width: 120px;
+    padding: 0 1.8rem;
+    border-radius: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+}
+
+#start-sync-btn {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+}
+
+#pause-resume-sync-btn {
+    background: linear-gradient(45deg, #f59e0b, #d97706);
+    color: white;
+}
+
+#stop-sync-btn {
+    background: linear-gradient(45deg, #ef4444, #dc2626);
+    color: white;
+}
+
+/* 按钮悬停效果 */
+.sync-buttons button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.08);
+}
+
+.sync-buttons button:not(:disabled):active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 禁用状态样式 */
+.sync-buttons button:disabled {
+    opacity: 0.7;
+    filter: grayscale(0.3);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 状态文字动态效果 */
+#sync-process-status {
+    position: relative;
+    padding-right: 1.2rem;
+}
+
+#sync-process-status::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: status-pulse 1.5s infinite;
+}
+
+@keyframes status-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(148,163,184,0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(148,163,184,0); }
+    100% { box-shadow: 0 0 0 0 rgba(148,163,184,0); }
+}
+
+#sync-process-status[data-status="进行中"]::after {
+    background: #10b981;
+    animation: status-pulse-active 1.5s infinite;
+}
+
+@keyframes status-pulse-active {
+    0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
 }
 
 /**
@@ -242,23 +428,60 @@
     /* 可以添加特定样式 */
 }
 
-/* 确保操作列有足够宽度容纳按钮 */
-#pending-files-table th:last-child,
-#pending-files-table td:last-child {
-    width: 12%; /* 稍微增加宽度 */
-    text-align: center; /* 居中按钮 */
+/* ========================
+   查询控件样式优化
+   ======================== */
+.filter-controls {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 2rem !important;
 }
 
-/* 调整其他列的宽度以适应新的操作列 */
-#pending-files-table th:nth-child(1), /* Temp Filename */
-#pending-files-table td:nth-child(1) { width: 22%; }
-#pending-files-table th:nth-child(2), /* Original Path */
-#pending-files-table td:nth-child(2) { width: 28%; }
-#pending-files-table th:nth-child(3), /* Original Filename */
-#pending-files-table td:nth-child(3) { width: 22%; }
-#pending-files-table th:nth-child(4), /* Size */
-#pending-files-table td:nth-child(4) { width: 8%; text-align: right; }
-#pending-files-table th:nth-child(5), /* Status */
-#pending-files-table td:nth-child(5) { width: 8%; }
+#query-keyword {
+    flex-grow: 1; /* 自动填充剩余空间 */
+    max-width: 900px; /* 最大宽度限制 */
+    height: 35px; /* 匹配按钮高度 */
+    border: 2px solid #e2e8f0;
+    border-radius: 10px !important;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
 
+#query-keyword:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.15);
+    outline: none;
+}
 
+#query-keyword::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+#query-btn {
+    height: 35px;
+    padding: 0 2rem;
+    border-radius: 10px !important;
+    background: linear-gradient(45deg, #3b82f6, #2563eb);
+    border: none;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(59,130,246,0.2);
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+#query-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(59,130,246,0.25);
+}
+
+#query-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+}
