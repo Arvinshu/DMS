@@ -12,11 +12,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- DOM 元素获取 ---
     const sidebarLinks = document.querySelectorAll('.sub-nav a[data-view]');
     const views = document.querySelectorAll('.view-container .view');
-    const projectManagementView = document.getElementById('project-management-view');
+    const projectManagementView = document.getElementById('project-management-view'); // 仍然可以获取，即使不是默认
+    const projectStatisticsView = document.getElementById('project-statistics-view'); // 获取统计视图
     const contentArea = document.querySelector('.content-area'); // 获取内容区域用于显示错误
 
-    if (!projectManagementView || !contentArea) {
-        console.error('Project management view or content area not found.');
+    if (!contentArea || views.length === 0) { // 检查核心元素
+        console.error('Content area or view containers not found.');
         return;
     }
 
@@ -24,9 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let lookupData = {};
     let stagesData = [];
     let employeesData = [];
-
-    // *** 移除全局 showLoading ***
-    // AppUtils.showLoading(projectManagementView);
 
     try {
         // 并行获取 Lookups 和 Stages 数据
@@ -43,8 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Stages data fetched:', stagesData);
 
         // --- 初始化各个模块 ---
+        // 这些模块的初始化不依赖于哪个视图是默认显示的
         if (typeof ProjectListModule !== 'undefined' && typeof ProjectListModule.init === 'function') {
-            ProjectListModule.init(); // ProjectListModule 内部会处理自己的加载状态
+            ProjectListModule.init();
             populateSearchDropdowns(lookupData);
         } else {
             console.error('ProjectListModule is not defined or init function is missing.');
@@ -62,21 +61,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('ProjectTasksModule is not defined or init function is missing.');
         }
 
-        // --- 初始化视图切换 ---
+        // --- 初始化视图切换 (会根据 HTML 中的 active 类设置默认视图) ---
         setupViewSwitcher(sidebarLinks, views);
+
+        // --- 重要：如果默认视图是统计视图，需要确保统计模块被初始化 ---
+        // setupViewSwitcher 会处理视图的显示/隐藏，但我们需要手动触发统计模块的初始化逻辑
+        const defaultActiveView = document.querySelector('.view-container .view.active');
+        if (defaultActiveView && defaultActiveView.id === 'project-statistics-view') {
+            console.log('[PROJECT_MAIN] Default view is Statistics View, initializing statistics module...');
+            if (typeof initializeOrRefreshStatisticsModule === 'function') {
+                // 调用统计模块的初始化函数
+                await initializeOrRefreshStatisticsModule();
+            } else {
+                console.error('[PROJECT_MAIN] initializeOrRefreshStatisticsModule function is not defined.');
+            }
+        }
+
 
     } catch (error) {
         console.error('Error during project page initialization:', error);
         contentArea.innerHTML = `<div class="error-message p-4 bg-red-100 border border-red-400 text-red-700 rounded">页面初始化失败: ${error.message || '请刷新页面重试'}</div>`;
-    } finally {
-        // *** 移除全局 hideLoading ***
-        // AppUtils.hideLoading(projectManagementView);
     }
 
     console.log('Project Management Page initialized.');
 });
 
-// ... (populateSearchDropdowns, populateSelect, populateSelectFromMap, setupViewSwitcher 函数保持不变) ...
+// ... (populateSearchDropdowns, populateSelect, populateSelectFromMap 函数保持不变) ...
 
 /**
  * 填充搜索栏的下拉框选项
@@ -176,10 +186,16 @@ function setupViewSwitcher(links, viewElements) {
     console.log(`Setting up view switcher for ${links.length} links.`);
 
     links.forEach(link => {
-        link.addEventListener('click', (event) => {
+        link.addEventListener('click', async (event) => { // **修改点：添加 async**
             event.preventDefault();
             const targetViewId = link.getAttribute('href')?.substring(1);
             if (!targetViewId) return;
+
+            // 检查是否是切换到统计视图
+            const isSwitchingToStats = targetViewId === 'project-statistics-view';
+            const currentActiveView = document.querySelector('.view-container .view.active');
+            const isAlreadyStatsView = currentActiveView && currentActiveView.id === 'project-statistics-view';
+
             let viewFound = false;
             viewElements.forEach(view => {
                 if (view.id === targetViewId) {
@@ -195,12 +211,26 @@ function setupViewSwitcher(links, viewElements) {
                 links.forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
                 console.log(`Switched to view: ${targetViewId}`);
+
+                // --- 重要：如果切换到统计视图，并且之前不是统计视图，则初始化/刷新统计模块 ---
+                if (isSwitchingToStats && !isAlreadyStatsView) {
+                    console.log('[PROJECT_MAIN] Switched to Statistics View, initializing/refreshing statistics module...');
+                    if (typeof initializeOrRefreshStatisticsModule === 'function') {
+                        // 调用统计模块的初始化/刷新函数
+                        await initializeOrRefreshStatisticsModule(); // **修改点：使用 await**
+                    } else {
+                        console.error('[PROJECT_MAIN] initializeOrRefreshStatisticsModule function is not defined.');
+                    }
+                }
+
             } else {
                 console.warn(`Target view with ID "${targetViewId}" not found.`);
             }
         });
     });
 
+    // --- 设置初始视图 ---
+    // 这部分逻辑现在会读取 HTML 中设置的 active 类来确定默认视图
     const defaultViewLink = document.querySelector('.sub-nav a[data-view].active') || links[0];
     if (defaultViewLink) {
         const defaultViewId = defaultViewLink.getAttribute('href')?.substring(1);
@@ -221,7 +251,8 @@ function setupViewSwitcher(links, viewElements) {
                 defaultViewLink.classList.add('active');
                 console.log(`Default view set to: ${defaultViewId}`);
             } else {
-                console.warn(`Default view element with ID "${defaultViewId}" not found. Displaying first view.`);
+                // Fallback if active class in HTML points to non-existent view
+                console.warn(`Default view element with ID "${defaultViewId}" (from active link) not found. Displaying first view.`);
                 viewElements.forEach((view, index) => {
                     view.style.display = index === 0 ? 'block' : 'none';
                     if(index === 0) view.classList.add('active');
@@ -230,6 +261,7 @@ function setupViewSwitcher(links, viewElements) {
                 links.forEach((l, index) => l.classList.toggle('active', index === 0));
             }
         } else {
+            // Fallback if active link has no href
             console.warn("Default active link has no valid href. Displaying first view.");
             viewElements.forEach((view, index) => {
                 view.style.display = index === 0 ? 'block' : 'none';
@@ -239,6 +271,7 @@ function setupViewSwitcher(links, viewElements) {
             links.forEach((l, index) => l.classList.toggle('active', index === 0));
         }
     } else {
+        // Fallback if no links found or no active link
         console.warn("Could not determine default view link. Displaying first view.");
         viewElements.forEach((view, index) => {
             view.style.display = index === 0 ? 'block' : 'none';

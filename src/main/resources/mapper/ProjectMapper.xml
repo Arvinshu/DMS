@@ -151,4 +151,111 @@
         WHERE project_id = #{projectId}
     </select>
 
+    <select id="countProjectsByStatusAndDateRange" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM t_project
+        <where>
+            <if test="statusList != null and !statusList.isEmpty()">
+                AND project_status_column IN <foreach item="statusItem" collection="statusList" open="(" separator="," close=")">
+                #{statusItem}
+            </foreach>
+            </if>
+            <if test="startDate != null">
+                AND DATE(created_at) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND DATE(created_at) &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+
+    <select id="countProjectsGroupedByField" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+        <choose>
+            <when test="groupByField == 'businessTypeName'">
+                business_type_name as label,
+            </when>
+            <when test="groupByField == 'profitCenterZone'">
+                profit_center_zone as label,
+            </when>
+            <otherwise>
+                'N/A' as label,
+            </otherwise>
+        </choose>
+        COUNT(*) as value
+        FROM t_project
+        <where>
+            <if test="startDate != null">
+                AND DATE(created_at) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND DATE(created_at) &lt;= #{endDate}
+            </if>
+        </where>
+        <choose>
+            <when test="groupByField == 'businessTypeName'">
+                GROUP BY business_type_name
+            </when>
+            <when test="groupByField == 'profitCenterZone'">
+                GROUP BY profit_center_zone
+            </when>
+            <otherwise>
+                GROUP BY label </otherwise>
+        </choose>
+        ORDER BY value DESC
+    </select>
+
+    <select id="selectActiveProjectsForRiskAssessment" parameterType="java.util.Map" resultMap="BaseProjectResultMap">
+        SELECT
+        project_id,
+        project_name,
+        project_manager_employee,
+        business_type_name,
+        profit_center_zone,
+        created_at
+        FROM
+        t_project
+        <where>
+            <if test="activeStatusCodes != null and !activeStatusCodes.isEmpty()">
+                AND project_db_status IN <foreach item="statusCode" collection="activeStatusCodes" open="(" separator="," close=")">
+                #{statusCode}
+            </foreach>
+            </if>
+            <if test="activeStatusCodes == null or activeStatusCodes.isEmpty()">
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findProjectsForStatistics" parameterType="java.util.Map" resultMap="BaseProjectResultMap">
+        SELECT
+        project_id,
+        project_name,
+        project_description,
+        business_type_name,
+        profit_center_zone,
+        project_manager_employee,
+        ts_bm,
+        created_at,
+        updated_at,
+        created_by,
+        updated_by
+        FROM
+        t_project
+        <where>
+            <if test="createdDateStart != null">
+                AND DATE(created_at) &gt;= #{createdDateStart}
+            </if>
+            <if test="createdDateEnd != null">
+                AND DATE(created_at) &lt;= #{createdDateEnd}
+            </if>
+            <if test="businessTypeName != null and businessTypeName != ''">
+                AND business_type_name = #{businessTypeName}
+            </if>
+            <if test="profitCenterZone != null and profitCenterZone != ''">
+                AND profit_center_zone = #{profitCenterZone}
+            </if>
+        </where>
+        ORDER BY created_at DESC </select>
+
 </mapper>

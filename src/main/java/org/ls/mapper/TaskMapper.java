@@ -76,4 +76,42 @@ public interface TaskMapper {
     int countTasksByProjectId(@Param("projectId") Long projectId); // 添加方法声明
 
 
+    // --- 新增的统计相关方法 ---
+
+    /**
+     * 查询 t_task 表中去重的 assignee_employee 字段。
+     *
+     * @return 去重后的任务负责人列表
+     */
+    List<String> selectDistinctAssignees();
+
+    /**
+     * 根据传入的参数统计任务数量。
+     * 参数通过 Map 传递，键名与SQL中的变量对应。
+     * 例如：params.put("assigneeEmployee", "E001-张三");
+     * params.put("statusList", List.of("待办", "进行中"));
+     *
+     * @param params 查询参数Map
+     * @return 符合条件的任务数量
+     */
+    Integer countTasksByCriteria(Map<String, Object> params);
+
+    /**
+     * 根据传入参数查询任务列表，用于统计分析。
+     * 例如：风险评估、到期/逾期列表、员工任务详情。
+     *
+     * @param params 查询参数Map
+     * @return 符合条件的任务列表 (Task实体列表)
+     */
+    List<Task> selectTasksForStatistics(Map<String, Object> params);
+
+    /**
+     * 用于员工负载图，统计每个员工名下不同状态的任务数。
+     *
+     * @param params 查询参数Map，可包含 statusList (例如: ['待办', '进行中']) 和 dateRange (如果需要按日期筛选任务)
+     * @return List of Maps, 每个Map包含 "assignee_employee", "task_status", "task_count"
+     */
+    List<Map<String, Object>> countTasksByAssigneeAndStatusGrouped(Map<String, Object> params);
+
+
 }

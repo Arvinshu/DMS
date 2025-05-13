@@ -7,7 +7,15 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
     <link rel="stylesheet" th:href="@{/css/project.css}">
+    <link rel="stylesheet" th:href="@{/css/project_statistics.css}">
     <link rel="icon" th:href="@{/favicon.ico}" type="image/x-icon">
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const CONTEXT_PATH = /*[[@{/}]]*/ ''; // 获取应用的根路径
+        // 确保此脚本块在所有其他自定义JS文件之前执行
+        /*]]>*/
+    </script>
 </head>
 <body class="bg-gray-100 font-sans">
 <div class="flex flex-col min-h-screen">
@@ -16,8 +24,8 @@
         <aside class="sub-nav-container flex-shrink-0 overflow-y-auto">
             <nav>
                 <ul class="sub-nav">
-                    <li><a href="#project-management-view" data-view="project_management" class="active">项目管理</a></li>
-                    <li><a href="#project-statistics-view" data-view="project_statistics">项目工作概览</a></li>
+                    <li><a href="#project-statistics-view" data-view="project_statistics" class="active">项目工作概览</a></li>
+                    <li><a href="#project-management-view" data-view="project_management">项目管理</a></li>
                     <li><a href="#project-weekly-report" data-view="project_weekly">工作周报生成</a></li>
                 </ul>
             </nav>
@@ -25,7 +33,7 @@
         <main class="content-area flex-1 overflow-y-auto p-6">
             <h1>项目管理</h1>
             <div class="view-container">
-                <div id="project-management-view" class="view active bg-white p-4 rounded-lg shadow">
+                <div id="project-management-view" class="view bg-white p-4 rounded-lg shadow">
                     <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目列表与任务</h2>
                     <div id="project-search-bar" class="search-bar controls mb-4">
                         <input type="text" id="search-project-name" placeholder="项目名称..." class="form-input">
@@ -117,11 +125,147 @@
                         <div th:replace="~{fragments/pagination :: pagination}"></div>
                     </div>
                 </div>
-                <div id="project-statistics-view" class="view hidden bg-white p-4 rounded-lg shadow">
+                <div id="project-statistics-view" class="view active bg-white p-4 rounded-lg shadow">
                     <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目工作概览</h2>
-                    <p class="text-gray-600">用以展示每个员工项目支持情况，展示内容包括员工当前手头正在进行的项目总数量、员工。</p>
+
+                    <div class="statistics-filters mb-6 p-4 bg-gray-50 rounded-md shadow-sm">
+                        <h3 class="text-md font-semibold mb-2 text-gray-600">筛选条件</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label for="stat-date-range" class="block text-sm font-medium text-gray-700">时间范围:</label>
+                                <select id="stat-date-range" class="form-select mt-1 block w-full">
+                                    <option value="this_week" selected>本周</option> <option value="last_week">上周</option>
+                                    <option value="this_month">本月</option>
+                                    <option value="last_month">上月</option>
+                                    <option value="this_quarter">本季度</option>
+                                    <option value="custom">自定义</option>
+                                </select>
+                                <div id="custom-date-pickers-container" class="mt-2 space-y-2" style="display: none;">
+                                    <input type="text" id="stat-custom-date-start" class="form-input flatpickr-input" placeholder="开始日期...">
+                                    <input type="text" id="stat-custom-date-end" class="form-input flatpickr-input" placeholder="结束日期...">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="stat-employee-filter" class="block text-sm font-medium text-gray-700">员工:</label>
+                                <select id="stat-employee-filter" class="form-select mt-1 block w-full">
+                                    <option value="all">所有员工</option>
+                                </select>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="apply-stats-filter-btn" class="btn btn-primary w-full">应用筛选</button>
+                                <button id="clear-stats-filter-btn" class="btn btn-secondary w-full">清空筛选</button> </div>
+                        </div>
+                    </div>
+
+                    <div id="department-overview-section" class="mb-8">
+                        <h3 class="text-xl font-semibold mb-3 text-indigo-700">部门整体情况</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="stat-card bg-blue-100 p-3 rounded shadow">
+                                <h4 class="text-sm text-blue-700 font-semibold">活跃项目数</h4>
+                                <p class="text-2xl font-bold" id="dept-active-projects">N/A</p>
+                            </div>
+                            <div class="stat-card bg-yellow-100 p-3 rounded shadow">
+                                <h4 class="text-sm text-yellow-700 font-semibold">进行中任务</h4>
+                                <p class="text-2xl font-bold" id="dept-inprogress-tasks">N/A</p>
+                            </div>
+                            <div class="stat-card bg-red-100 p-3 rounded shadow">
+                                <h4 class="text-sm text-red-700 font-semibold">总体逾期任务</h4>
+                                <p class="text-2xl font-bold" id="dept-total-overdue-tasks">N/A</p>
+                                <a href="#overdue-tasks-table-anchor" class="text-xs text-red-600 hover:underline">查看详情</a>
+                            </div>
+                            <div class="stat-card bg-green-100 p-3 rounded shadow">
+                                <h4 class="text-sm text-green-700 font-semibold" id="dept-completed-tasks-period-label">本期间完成任务</h4> <p class="text-2xl font-bold" id="dept-completed-tasks-period">N/A</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                            <div class="chart-container bg-white p-4 rounded-lg shadow">
+                                <h4 class="text-md font-semibold mb-2 text-gray-700">项目状态分布</h4>
+                                <canvas id="project-status-pie-chart"></canvas>
+                            </div>
+                            <div class="chart-container bg-white p-4 rounded-lg shadow">
+                                <h4 class="text-md font-semibold mb-2 text-gray-700">员工任务负载 (进行中)</h4>
+                                <canvas id="employee-load-bar-chart"></canvas>
+                            </div>
+                            <div class="chart-container bg-white p-4 rounded-lg shadow">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="text-md font-semibold text-gray-700" id="project-type-chart-title">项目构成分析</h4>
+                                    <div class="inline-flex rounded-md shadow-sm" role="group">
+                                        <button type="button" id="toggle-type-business" class="btn btn-xs btn-chart-toggle active" data-type="businessTypeName">按业务类型</button>
+                                        <button type="button" id="toggle-type-profit" class="btn btn-xs btn-chart-toggle" data-type="profitCenterZone">按利润中心</button>
+                                    </div>
+                                </div>
+                                <canvas id="project-type-pie-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div id="at-risk-projects-section" class="mb-6 bg-white p-4 rounded-lg shadow">
+                            <h4 class="text-md font-semibold mb-2 text-red-700 border-b pb-1">风险项目列表 (At-Risk Projects)</h4>
+                            <div class="table-container overflow-x-auto">
+                                <table class="data-table min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">项目名称</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">项目经理</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">风险等级</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">逾期任务数</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">主要风险点</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="at-risk-projects-tbody" class="bg-white divide-y divide-gray-200">
+                                    <tr><td colspan="6" class="text-center text-gray-500 py-4">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                                <p id="no-at-risk-projects" class="text-center text-gray-500 py-4" style="display: none;">暂无明显风险项目。</p>
+                            </div>
+                        </div>
+
+                        <div id="deadlines-overdue-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="bg-white p-4 rounded-lg shadow">
+                                <h4 class="text-md font-semibold mb-2 text-yellow-600 border-b pb-1">未来7天即将到期的任务</h4>
+                                <div id="upcoming-deadlines-list" class="max-h-60 overflow-y-auto">
+                                    <p class="text-center text-gray-500 py-4">加载中...</p>
+                                </div>
+                                <p id="no-upcoming-tasks" class="text-center text-gray-500 py-4" style="display: none;">未来7天内无即将到期的任务。</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow" id="overdue-tasks-table-anchor">
+                                <h4 class="text-md font-semibold mb-2 text-red-600 border-b pb-1">已逾期的任务</h4>
+                                <div id="overdue-tasks-list" class="max-h-60 overflow-y-auto">
+                                    <p class="text-center text-gray-500 py-4">加载中...</p>
+                                </div>
+                                <p id="no-overdue-tasks" class="text-center text-gray-500 py-4" style="display: none;">暂无已逾期的任务。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="employee-details-section" class="mb-8">
+                        <h3 class="text-xl font-semibold mb-3 text-green-700">员工工作情况 (<span id="display-employee-name">所有员工</span>)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="employee-kpi-cards" style="display:none;">
+                            <div class="stat-card bg-gray-200 p-3 rounded shadow">
+                                <h4 class="text-sm text-gray-700 font-semibold">我的待办</h4>
+                                <p class="text-2xl font-bold" id="emp-todo-tasks">N/A</p>
+                            </div>
+                            <div class="stat-card bg-gray-200 p-3 rounded shadow">
+                                <h4 class="text-sm text-gray-700 font-semibold">我的进行中</h4>
+                                <p class="text-2xl font-bold" id="emp-inprogress-tasks">N/A</p>
+                            </div>
+                            <div class="stat-card bg-gray-200 p-3 rounded shadow">
+                                <h4 class="text-sm text-gray-700 font-semibold">我的逾期</h4>
+                                <p class="text-2xl font-bold" id="emp-overdue-tasks">N/A</p>
+                            </div>
+                        </div>
+
+                        <div id="employee-task-list-container" class="bg-white p-4 rounded-lg shadow">
+                            <h4 class="text-md font-semibold mb-2 text-gray-700">任务列表 (按项目分组)</h4>
+                            <div id="employee-tasks-by-project">
+                                <p class="text-gray-500" id="employee-task-placeholder">请在上方筛选器中选择一位员工以查看其任务详情。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-6">注意: 此为演示页面结构，实际数据和图表需后端接口支持及前端JS渲染。</p>
                 </div>
-                <div id="project-weekly-report" class="view hidden bg-white p-4 rounded-lg shadow">
+                <div id="project-weekly-report" class="view bg-white p-4 rounded-lg shadow">
                     <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目周报生成</h2>
                     <p class="text-gray-600">此部分功能暂未开放。</p>
                 </div>
@@ -129,13 +273,23 @@
         </main>
     </div>
 </div>
+
 <div th:replace="~{fragments/scripts :: commonScripts}"></div>
+
 <script th:src="@{/js/lib/flatpickr.min.js}"></script>
 <script th:src="@{/js/lib/zh.js}"></script>
+<script th:src="@{/js/lib/chart.umd.js}"></script>
 <script th:src="@{/js/project/project_api.js}"></script>
 <script th:src="@{/js/project/project_list.js}"></script>
 <script th:src="@{/js/project/project_crud.js}"></script>
 <script th:src="@{/js/project/project_tasks.js}"></script>
 <script th:src="@{/js/project/project_main.js}"></script>
+
+<script th:src="@{/js/project/statistics/project_statistics_api.js}"></script>
+<script th:src="@{/js/project/statistics/project_statistics_filters.js}"></script>
+<script th:src="@{/js/project/statistics/project_statistics_ui.js}"></script>
+<script th:src="@{/js/project/statistics/project_statistics_charts.js}"></script>
+<script th:src="@{/js/project/statistics/project_statistics_main.js}"></script>
+
 </body>
 </html>

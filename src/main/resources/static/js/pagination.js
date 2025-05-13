@@ -162,7 +162,7 @@
             linksContainer.style.display = 'none'; // 隐藏页码按钮本身
             console.debug(`[Pagination] Total pages <= 1, hiding links for #${containerId}`);
             // 打印最终 HTML 状态
-            console.log(`[Pagination] Finished setup for #${containerId}. Final innerHTML of container:`, container.innerHTML);
+            // console.log(`[Pagination] Finished setup for #${containerId}. Final innerHTML of container:`, container.innerHTML);
             return; // 不再生成页码
         } else {
             // 确保页码导航显示，并移除可能添加的居中样式

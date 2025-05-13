@@ -101,4 +101,146 @@
         WHERE project_id = #{projectId}
     </select>
 
+
+
+    <select id="selectDistinctAssignees" resultType="java.lang.String">
+        SELECT DISTINCT assignee_employee
+        FROM t_task
+        WHERE assignee_employee IS NOT NULL AND assignee_employee != ''
+        ORDER BY assignee_employee
+    </select>
+
+    <select id="countTasksByCriteria" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM t_task
+        <where>
+            <if test="assigneeEmployee != null and assigneeEmployee != ''">
+                AND assignee_employee = #{assigneeEmployee}
+            </if>
+            <if test="statusList != null and !statusList.isEmpty()">
+                AND task_status IN
+                <foreach item="statusItem" collection="statusList" open="(" separator="," close=")">
+                    #{statusItem}
+                </foreach>
+            </if>
+            <if test="projectId != null">
+                AND project_id = #{projectId}
+            </if>
+            <if test="dueDateStart != null">
+                AND due_date &gt;= #{dueDateStart}
+            </if>
+            <if test="dueDateEnd != null">
+                AND due_date &lt;= #{dueDateEnd}
+            </if>
+            <if test="isOverdue != null and isOverdue == true">
+                AND due_date &lt; CURRENT_DATE AND task_status != '已完成'
+            </if>
+            <if test="isNotOverdue != null and isNotOverdue == true"> AND (due_date &gt;= CURRENT_DATE OR task_status = '已完成')
+            </if>
+            <if test="priorityList != null and !priorityList.isEmpty()">
+                AND priority IN
+                <foreach item="priorityItem" collection="priorityList" open="(" separator="," close=")">
+                    #{priorityItem}
+                </foreach>
+            </if>
+            <if test="createdDateStart != null">
+                AND DATE(created_at) &gt;= #{createdDateStart}
+            </if>
+            <if test="createdDateEnd != null">
+                AND DATE(created_at) &lt;= #{createdDateEnd}
+            </if>
+            <if test="updatedDateStart != null"> AND DATE(updated_at) &gt;= #{updatedDateStart}
+            </if>
+            <if test="updatedDateEnd != null"> AND DATE(updated_at) &lt;= #{updatedDateEnd}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTasksForStatistics" parameterType="java.util.Map" resultMap="TaskResultMap">
+        SELECT * FROM t_task
+        <where>
+            <if test="assigneeEmployee != null and assigneeEmployee != ''">
+                AND assignee_employee = #{assigneeEmployee}
+            </if>
+            <if test="statusList != null and !statusList.isEmpty()">
+                AND task_status IN
+                <foreach item="statusItem" collection="statusList" open="(" separator="," close=")">
+                    #{statusItem}
+                </foreach>
+            </if>
+            <if test="projectId != null">
+                AND project_id = #{projectId}
+            </if>
+            <if test="projectIdList != null and !projectIdList.isEmpty()">
+                AND project_id IN
+                <foreach item="pId" collection="projectIdList" open="(" separator="," close=")">
+                    #{pId}
+                </foreach>
+            </if>
+            <if test="dueDateStart != null">
+                AND due_date &gt;= #{dueDateStart}
+            </if>
+            <if test="dueDateEnd != null">
+                AND due_date &lt;= #{dueDateEnd}
+            </if>
+            <if test="isOverdue != null and isOverdue == true">
+                AND due_date &lt; CURRENT_DATE AND task_status != '已完成'
+            </if>
+            <if test="isNotOverdue != null and isNotOverdue == true">
+                AND (due_date &gt;= CURRENT_DATE OR task_status = '已完成')
+            </if>
+            <if test="priorityList != null and !priorityList.isEmpty()">
+                AND priority IN
+                <foreach item="priorityItem" collection="priorityList" open="(" separator="," close=")">
+                    #{priorityItem}
+                </foreach>
+            </if>
+            <if test="createdDateStart != null">
+                AND DATE(created_at) &gt;= #{createdDateStart}
+            </if>
+            <if test="createdDateEnd != null">
+                AND DATE(created_at) &lt;= #{createdDateEnd}
+            </if>
+            <if test="updatedDateStart != null">
+                AND DATE(updated_at) &gt;= #{updatedDateStart}
+            </if>
+            <if test="updatedDateEnd != null">
+                AND DATE(updated_at) &lt;= #{updatedDateEnd}
+            </if>
+        </where>
+        <if test="orderBy != null and orderBy != ''">
+            ORDER BY ${orderBy} </if>
+    </select>
+
+    <select id="countTasksByAssigneeAndStatusGrouped" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+        assignee_employee,
+        task_status,
+        COUNT(*) as task_count
+        FROM
+        t_task
+        <where>
+            assignee_employee IS NOT NULL AND assignee_employee != ''
+            <if test="statusList != null and !statusList.isEmpty()">
+                AND task_status IN
+                <foreach item="statusItem" collection="statusList" open="(" separator="," close=")">
+                    #{statusItem}
+                </foreach>
+            </if>
+            <if test="createdDateStart != null">
+                AND DATE(created_at) &gt;= #{createdDateStart}
+            </if>
+            <if test="createdDateEnd != null">
+                AND DATE(created_at) &lt;= #{createdDateEnd}
+            </if>
+            AND task_status != '已完成' AND task_status != '已取消'
+        </where>
+        GROUP BY
+        assignee_employee,
+        task_status
+        ORDER BY
+        assignee_employee,
+        task_status
+    </select>
+
 </mapper>

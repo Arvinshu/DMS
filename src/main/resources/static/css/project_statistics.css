@@ -1,0 +1,238 @@
+/**
+ * 文件路径: src/main/resources/static/css/project_statistics.css
+ * 开发时间: 2025-05-10 22:47:00 UTC/GMT+08:00
+ * 作者: Gemini
+ * 代码用途: 项目统计页面专属的CSS样式。
+ * 更新 (2025-05-13):
+ * - 为 .chart-container 添加 height 属性以解决无限增长问题。
+ * - 美化筛选器区域 (.statistics-filters) 以匹配 project.css 中的搜索栏样式。
+ */
+
+/* 加载指示器动画 (用于 AppUtils.showLoading 中的 .loader) */
+.loader {
+    border: 5px solid #f3f3f3; /* Light grey */
+    border-top: 5px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: auto; /* 使其在 flex 容器中居中 */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ========================
+   统计筛选器区域美化
+   ======================== */
+
+/* 筛选器容器样式 (模仿 #project-search-bar) */
+.statistics-filters {
+    gap: 1rem; /* 增加元素间距 */
+    padding: 1.25rem 1.5rem; /* 调整内边距 */
+    background: #f8fafc; /* 淡白色背景 */
+    border-radius: 12px; /* 圆角 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* 阴影 */
+    margin-bottom: 2rem !important; /* 确保与下方内容间距 */
+    border: 1px solid #e2e8f0; /* 添加细边框 */
+}
+
+/* 筛选器标题 */
+.statistics-filters h3 {
+    margin-bottom: 1.25rem; /* 增加标题下方间距 */
+    font-size: 1rem; /* 调整字体大小 */
+    color: #334155; /* 标题颜色 */
+}
+
+/* 筛选器内部网格布局 (保持 Tailwind 控制，但可微调) */
+.statistics-filters .grid {
+    gap: 1.5rem; /* 增加网格间距 */
+}
+
+/* 筛选器控件通用样式 (标签 + 输入框/下拉框) */
+.statistics-filters > .grid > div:not(:last-child) { /* 应用于包含标签和控件的 div */
+    display: flex;
+    flex-direction: column; /* 标签在上，控件在下 */
+    gap: 0.3rem; /* 标签和控件之间的间距 */
+}
+
+/* 筛选器标签样式 */
+.statistics-filters label {
+    font-size: 0.85rem; /* 标签字体大小 */
+    font-weight: 500; /* 标签字体粗细 */
+    color: #4b5563; /* 标签颜色 */
+    margin-bottom: 0; /* 移除 Tailwind 可能添加的默认 margin */
+}
+
+/* 筛选器输入/下拉框样式 (模仿 .form-input, .form-select) */
+#stat-date-range,
+#stat-employee-filter,
+#stat-custom-date-start,
+#stat-custom-date-end {
+    height: 42px; /* 固定高度 */
+    /* min-width: 180px; */ /* 移除最小宽度，让网格控制 */
+    flex: 1 1 auto; /* 允许伸缩 */
+    border: 2px solid #e2e8f0; /* 边框 */
+    border-radius: 10px !important; /* 圆角 (使用 !important 覆盖 Tailwind) */
+    padding: 0.5rem 1rem; /* 内边距 (左右稍小) */
+    font-size: 0.9rem; /* 字体大小 */
+    background: #ffffff; /* 背景色 */
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1); /* 过渡效果 */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03); /* 细微阴影 */
+    width: 100%; /* 宽度占满父容器 */
+    box-sizing: border-box; /* 确保 padding 不会撑大元素 */
+}
+
+/* 筛选器下拉框聚焦/悬停效果 */
+#stat-date-range:focus,
+#stat-employee-filter:focus,
+#stat-custom-date-start:focus,
+#stat-custom-date-end:focus {
+    border-color: #3b82f6; /* 蓝色边框 */
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15); /* 蓝色光晕 */
+    outline: none; /* 移除默认轮廓 */
+}
+#stat-date-range:hover,
+#stat-employee-filter:hover,
+#stat-custom-date-start:hover,
+#stat-custom-date-end:hover {
+    border-color: #cbd5e1; /* 悬停边框颜色 */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05); /* 悬停阴影 */
+}
+
+/* 筛选器下拉框箭头美化 (模仿 project.css) */
+#stat-date-range,
+#stat-employee-filter {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%233b82f6' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.5rem !important; /* 增加右侧留出箭头空间 */
+}
+
+/* 筛选器按钮样式 (模仿 #search-project-btn, #add-project-btn) */
+#apply-stats-filter-btn,
+#clear-stats-filter-btn {
+    height: 42px; /* 固定高度 */
+    padding: 0 1.5rem; /* 调整内边距 */
+    border-radius: 10px !important; /* 圆角 */
+    font-weight: 600; /* 字体加粗 */
+    letter-spacing: 0.5px; /* 字间距 */
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1); /* 过渡 */
+    border: none; /* 无边框 */
+    display: inline-flex; /* Flex 布局 */
+    align-items: center; /* 垂直居中 */
+    justify-content: center; /* 水平居中 */
+    gap: 0.5rem; /* 图标和文字间距 (如果未来加图标) */
+    cursor: pointer; /* 可点击手势 */
+    width: 100%; /* 占满父容器 (因为在 grid 子项中) */
+}
+
+/* 应用筛选按钮 (主色调 - 蓝色) */
+#apply-stats-filter-btn {
+    background: linear-gradient(45deg, #3b82f6, #2563eb); /* 蓝色渐变 */
+    color: white;
+    box-shadow: 0 4px 6px rgba(59,130,246,0.2); /* 蓝色阴影 */
+}
+
+/* 清空筛选按钮 (次要色调 - 灰色/白色) */
+#clear-stats-filter-btn {
+    background: #ffffff; /* 白色背景 */
+    color: #4b5563; /* 灰色文字 */
+    border: 2px solid #e2e8f0; /* 灰色边框 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* 细微阴影 */
+}
+
+/* 按钮交互效果 */
+#apply-stats-filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(59,130,246,0.25); /* 悬停阴影加深 */
+}
+#clear-stats-filter-btn:hover {
+    border-color: #cbd5e1; /* 悬停边框变深 */
+    background-color: #f8fafc; /* 悬停背景变灰 */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05); /* 悬停阴影 */
+}
+
+#apply-stats-filter-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(59,130,246,0.15); /* 点击阴影变浅 */
+}
+#clear-stats-filter-btn:active {
+    transform: translateY(1px);
+    background-color: #f1f5f9; /* 点击背景变深 */
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); /* 点击内阴影 */
+}
+
+/* 筛选器按钮组容器 (Tailwind: flex space-x-2) */
+/* 可以根据需要调整其父 div 的对齐方式 */
+.statistics-filters .grid > div:last-child {
+    align-self: end; /* 让按钮组在网格单元格底部对齐 */
+}
+
+/* ========================
+   其他统计页面样式
+   ======================== */
+
+/* 项目类型分布图切换按钮组的样式 */
+.btn-chart-toggle {
+    /* 基础样式已由 Tailwind 的 .btn .btn-xs 提供 */
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.btn-chart-toggle.active {
+    background-color: #4a5568; /* bg-gray-700 示例激活背景色 */
+    color: white;
+    border-color: #4a5568; /* 边框颜色与背景一致 */
+    z-index: 10; /* 确保激活的按钮在最上层，如果按钮有重叠效果 */
+}
+
+/* 针对图表容器的微调 */
+.chart-container {
+    min-height: 300px; /* 确保图表有一个最小高度 */
+    position: relative; /* 用于内部绝对定位的元素，如加载提示 */
+    height: 350px; /* **新增：** 设置一个固定的高度，例如 350px。根据需要调整此值。 */
+    /* 如果希望高度有一定灵活性，可以使用 max-height: 400px; 代替 height */
+    /* width: 100%; */ /* 通常由 Tailwind 类如 'w-full' 控制，如果未控制则取消注释 */
+}
+
+/* 统计卡片中的链接样式 */
+.stat-card a {
+    transition: color 0.2s ease-in-out;
+}
+.stat-card a:hover {
+    text-decoration: underline;
+}
+
+/* 针对特定列表项的样式 */
+.task-item p {
+    margin-bottom: 0.25rem;
+}
+
+/* 滚动条美化 (可选, Webkit 浏览器) */
+.max-h-60::-webkit-scrollbar {
+    width: 8px;
+}
+
+.max-h-60::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.max-h-60::-webkit-scrollbar-thumb {
+    background: #c5c5c5;
+    border-radius: 10px;
+}
+
+.max-h-60::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+}
+
+/* 确保在您的主HTML或 fragments/header.html 中引入此CSS文件 */
+/* 例如: <link rel="stylesheet" th:href="@{/css/project_statistics.css}"> */
