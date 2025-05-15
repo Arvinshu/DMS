@@ -161,15 +161,15 @@
                         <h3 class="text-xl font-semibold mb-3 text-indigo-700">部门整体情况</h3>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <div class="stat-card bg-blue-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-blue-700 font-semibold">活跃项目数</h4>
+                                <h4 class="text-sm text-blue-700 font-semibold">活跃项目数(当前状态为“进行中”、“待办”、“已暂停”的项目数)</h4>
                                 <p class="text-2xl font-bold" id="dept-active-projects">N/A</p>
                             </div>
                             <div class="stat-card bg-yellow-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-yellow-700 font-semibold">进行中任务</h4>
+                                <h4 class="text-sm text-yellow-700 font-semibold">进行中任务(项目中状态为“进行中”的任务总和)</h4>
                                 <p class="text-2xl font-bold" id="dept-inprogress-tasks">N/A</p>
                             </div>
                             <div class="stat-card bg-red-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-red-700 font-semibold">总体逾期任务</h4>
+                                <h4 class="text-sm text-red-700 font-semibold">总体逾期任务(已超过 dueDate 且状态非“已完成”的任务总和)</h4>
                                 <p class="text-2xl font-bold" id="dept-total-overdue-tasks">N/A</p>
                                 <a href="#overdue-tasks-table-anchor" class="text-xs text-red-600 hover:underline">查看详情</a>
                             </div>
@@ -263,7 +263,7 @@
                         </div>
                     </div>
 
-                    <p class="text-xs text-gray-500 mt-6">注意: 此为演示页面结构，实际数据和图表需后端接口支持及前端JS渲染。</p>
+                    <p class="text-xs text-gray-500 mt-6">请在筛选条件中选择对应的员工，然后在此查看该员工在筛选时间范围内的工作情况。</p>
                 </div>
                 <div id="project-weekly-report" class="view bg-white p-4 rounded-lg shadow">
                     <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-gray-700">项目周报生成</h2>
