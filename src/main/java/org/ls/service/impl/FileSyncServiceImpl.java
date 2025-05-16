@@ -38,11 +38,12 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+        import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant; // 引入 Instant
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit; // +++ 引入 ChronoUnit 用于时间截断 +++
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -391,18 +392,16 @@ public class FileSyncServiceImpl implements FileSyncService {
                 try {
                     FileSyncService self = applicationContext.getBean(FileSyncService.class);
 
-                    // --- 修改点：移除特定的 NoSuchFileException catch ---
                     boolean isDirectory = Files.isDirectory(fullPath, LinkOption.NOFOLLOW_LINKS);
-                    // 注意：如果文件在检查时刚好被删除，isDirectory 会返回 false，
-                    // 这将使其被当作文件删除事件处理，这是可接受的行为。
 
                     if (isDirectory) {
-                        // 处理目录事件
                         if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                             log.info("检测到新目录: {}. 正在注册监控。", fullPath);
                             registerDirectoryTree(fullPath);
                         } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
                             log.info("检测到目录删除事件（或 key 失效前兆）: {}", fullPath);
+                            // +++ 目录删除事件也可能触发目标端空目录的清理检查 (如果需要实时性更高)
+                            // +++ 但通常由 performFullScan 处理更全面, 这里暂不直接处理目标端删除
                         }
                     } else {
                         // 处理文件事件
@@ -413,10 +412,8 @@ public class FileSyncServiceImpl implements FileSyncService {
                         }
                     }
                 } catch (IOException ioEx) {
-                    // 捕获检查 isDirectory 或其他潜在的 IO 错误
                     log.error("处理监控事件 {} 时发生 IO 错误，路径: {}", kind.name(), fullPath, ioEx);
                 } catch (Exception e) {
-                    // 捕获其他所有异常
                     log.error("处理监控事件 {} 时发生意外错误，路径: {}", kind.name(), fullPath, e);
                 }
             }
@@ -433,227 +430,158 @@ public class FileSyncServiceImpl implements FileSyncService {
 
     // --- 事件处理逻辑 (由监控线程或扫描任务调用, 带事务) ---
 
-    /**
-     * 处理文件创建或修改事件。复制文件到临时目录，并更新数据库记录。
-     * 使用 @Transactional 注解确保数据库操作的原子性。
-     *
-     * @param sourceFilePath 源文件的完整路径
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void handleFileCreateOrModify(Path sourceFilePath) {
-        // 检查是否是普通文件，如果不是则跳过
         if (!Files.isRegularFile(sourceFilePath, LinkOption.NOFOLLOW_LINKS)) {
             log.debug("跳过非普通文件事件: {}", sourceFilePath);
             return;
         }
         log.info("处理创建/修改事件: {}", sourceFilePath);
-        LocalDateTime sourceLastModifiedTime = null; // 用于存储源文件时间戳
+        LocalDateTime sourceLastModifiedTimeTruncated = null;
 
         try {
-            // 1. 获取源文件的最后修改时间
-            sourceLastModifiedTime = LocalDateTime.ofInstant(
-                    Files.getLastModifiedTime(sourceFilePath).toInstant(), ZoneId.systemDefault()
-            );
+            Instant sourceInstant = Files.getLastModifiedTime(sourceFilePath).toInstant();
+            Instant sourceInstantTruncatedToSecond = sourceInstant.truncatedTo(ChronoUnit.SECONDS);
+            sourceLastModifiedTimeTruncated = LocalDateTime.ofInstant(sourceInstantTruncatedToSecond, ZoneId.systemDefault());
 
-            // 2. 计算相对路径和文件名
             Path relativePath = sourceDirectory.relativize(sourceFilePath.getParent());
-            String relativeDirPath = formatRelativePath(relativePath); // 格式化为 "dir/" 或 ""
+            String relativeDirPath = formatRelativePath(relativePath);
             String originalFilename = sourceFilePath.getFileName().toString();
 
-            // 3. 查询数据库中是否已存在该文件的记录
             FileSyncMap existingRecord = fileSyncMapMapper.selectBySourcePath(relativeDirPath, originalFilename);
             String tempFilename;
             boolean isNewEntry = false;
 
             if (existingRecord == null) {
-                // 数据库中不存在记录 -> 新增文件
                 isNewEntry = true;
-                tempFilename = generateUniqueTempFilename(originalFilename); // 生成唯一的临时文件名
+                tempFilename = generateUniqueTempFilename(originalFilename);
                 log.debug("准备为新文件 {} 生成记录，临时文件名: {}", sourceFilePath, tempFilename);
             } else {
-                // 数据库中已存在记录 -> 修改文件 或 状态重置
-                tempFilename = existingRecord.getTempFilename(); // 使用已有的临时文件名
-                // 检查文件时间戳是否真的改变了，或者状态是否需要重置
-                if (sourceLastModifiedTime.equals(existingRecord.getSourceLastModified()) &&
-                        (STATUS_PENDING.equals(existingRecord.getStatus()) || STATUS_SYNCED.equals(existingRecord.getStatus()))) {
-                    // 如果时间戳相同，且状态已经是待同步或已同步，则无需操作
-                    log.debug("源文件 {} 未更改或状态无需更新，跳过处理。", sourceFilePath);
-                    return; // 提前返回，不执行后续操作
+                tempFilename = existingRecord.getTempFilename();
+
+                LocalDateTime dbSourceLastModified = existingRecord.getSourceLastModified();
+                LocalDateTime dbSourceLastModifiedTruncatedToSecond = null;
+                if (dbSourceLastModified != null) {
+                    dbSourceLastModifiedTruncatedToSecond = dbSourceLastModified.truncatedTo(ChronoUnit.SECONDS);
                 }
-                log.info("检测到源文件 {} 更改或状态需要重置 (DB状态: {}, DB时间: {}, 文件时间: {})。",
-                        sourceFilePath, existingRecord.getStatus(), existingRecord.getSourceLastModified(), sourceLastModifiedTime);
+
+                if (sourceLastModifiedTimeTruncated.equals(dbSourceLastModifiedTruncatedToSecond) &&
+                        (STATUS_PENDING.equals(existingRecord.getStatus()) || STATUS_SYNCED.equals(existingRecord.getStatus()))) {
+                    log.debug("源文件 {} 未更改(秒级比较)或状态无需更新，跳过处理。", sourceFilePath);
+                    return;
+                }
+                log.info("检测到源文件 {} 更改或状态需要重置 (DB状态: {}, DB时间(原始): {}, DB时间(秒级): {}, 文件时间(秒级): {})。",
+                        sourceFilePath, existingRecord.getStatus(), existingRecord.getSourceLastModified(), dbSourceLastModifiedTruncatedToSecond, sourceLastModifiedTimeTruncated);
             }
 
-            // 4. 复制文件到临时目录 (覆盖同名文件)
             Path tempFilePath = tempDirectory.resolve(tempFilename);
             Files.copy(sourceFilePath, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
             log.info("已复制源文件 {} 到临时文件 {}", sourceFilePath, tempFilePath);
 
-            // 5. 更新数据库记录
             if (isNewEntry) {
-                // 插入新记录
-                FileSyncMap newRecord = new FileSyncMap(null, relativeDirPath, originalFilename, tempFilename, STATUS_PENDING, null, sourceLastModifiedTime);
+                FileSyncMap newRecord = new FileSyncMap(null, relativeDirPath, originalFilename, tempFilename, STATUS_PENDING, null, sourceLastModifiedTimeTruncated);
                 fileSyncMapMapper.insert(newRecord);
-                log.debug("已插入新记录到数据库，temp 文件名: {}", tempFilename);
+                log.debug("已插入新记录到数据库，temp 文件名: {}，源文件修改时间(秒级): {}", tempFilename, sourceLastModifiedTimeTruncated);
             } else {
-                // 更新现有记录的状态为 'pending_sync' 并记录最新的源文件修改时间
-                fileSyncMapMapper.updateStatusAndTimestampsById(existingRecord.getId(), STATUS_PENDING, sourceLastModifiedTime);
-                log.debug("已更新记录状态为 pending，temp 文件名: {}", tempFilename);
+                fileSyncMapMapper.updateStatusAndTimestampsById(existingRecord.getId(), STATUS_PENDING, sourceLastModifiedTimeTruncated);
+                log.debug("已更新记录状态为 pending，temp 文件名: {}，源文件修改时间(秒级): {}", tempFilename, sourceLastModifiedTimeTruncated);
             }
-            // 事务将在方法成功结束时提交
 
         } catch (NoSuchFileException e) {
-            // 文件在处理过程中被删除，记录警告，事务会自动回滚（如果已开始）或不执行
             log.warn("处理创建/修改事件时文件 {} 已消失。", sourceFilePath, e);
         } catch (IOException e) {
-            // 文件复制失败，记录错误，尝试更新状态为 error_copying，然后抛出异常以回滚事务
             log.error("复制文件 {} 到临时目录时出错。正在回滚事务...", sourceFilePath, e);
-            // 尝试在独立事务中更新错误状态
-            updateStatusOnError(sourceFilePath, STATUS_ERROR_COPYING, sourceLastModifiedTime);
-            // 抛出运行时异常，确保当前事务回滚
+            updateStatusOnError(sourceFilePath, STATUS_ERROR_COPYING, sourceLastModifiedTimeTruncated);
             throw new RuntimeException("复制文件失败: " + sourceFilePath, e);
         } catch (Exception e) {
-            // 其他意外错误（如数据库操作失败）
             log.error("处理文件 {} 时发生意外错误。正在回滚事务...", sourceFilePath, e);
-            // 尝试在独立事务中更新错误状态
-            updateStatusOnError(sourceFilePath, STATUS_ERROR_COPYING, sourceLastModifiedTime);
-            // 抛出运行时异常，确保当前事务回滚
+            updateStatusOnError(sourceFilePath, STATUS_ERROR_COPYING, sourceLastModifiedTimeTruncated);
             throw new RuntimeException("处理文件时发生意外错误: " + sourceFilePath, e);
         }
     }
 
-    /**
-     * 处理文件删除事件。将数据库中对应记录的状态标记为 'pending_deletion'。
-     *
-     * @param sourceFilePath 被删除的源文件的原始路径
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void handleFileDelete(Path sourceFilePath) {
         log.info("处理删除事件，可能的文件路径: {}", sourceFilePath);
         try {
-            // 计算相对路径和文件名（即使文件已不存在）
             Path relativePath = sourceDirectory.relativize(sourceFilePath.getParent());
             String relativeDirPath = formatRelativePath(relativePath);
             String originalFilename = sourceFilePath.getFileName().toString();
 
-            // 查询数据库中对应的记录
             FileSyncMap recordToDelete = fileSyncMapMapper.selectBySourcePath(relativeDirPath, originalFilename);
 
             if (recordToDelete != null) {
-                // 如果记录存在且状态不是 'pending_deletion'，则更新状态
                 if (!STATUS_PENDING_DELETION.equals(recordToDelete.getStatus())) {
                     fileSyncMapMapper.updateStatusById(recordToDelete.getId(), STATUS_PENDING_DELETION);
                     log.info("已将源文件 {} 对应的记录 ID {} 标记为待删除。", sourceFilePath, recordToDelete.getId());
-                    // 注意：不在此处删除临时文件或目标文件，等待用户确认
                 } else {
-                    // 如果已经是待删除状态，则忽略重复事件
                     log.debug("记录 ID {} 已标记为待删除，忽略重复的删除事件。", recordToDelete.getId());
                 }
             } else {
-                // 如果数据库中找不到记录，可能已被手动删除或从未同步过
                 log.warn("未找到已删除源文件 {} 对应的数据库记录。", sourceFilePath);
             }
-            // 事务将在方法成功结束时提交
         } catch (Exception e) {
-            // 捕获数据库操作等异常
             log.error("处理文件删除事件 {} 时发生意外错误。正在回滚事务...", sourceFilePath, e);
-            // 抛出运行时异常，确保当前事务回滚
             throw new RuntimeException("处理文件删除时发生意外错误: " + sourceFilePath, e);
         }
     }
 
-    /**
-     * 在独立的事务中尝试更新记录的错误状态。
-     * 用于在主事务回滚时仍能记录错误信息。
-     *
-     * @param sourceFilePath         源文件路径 (用于查找记录)
-     * @param errorStatus            要设置的错误状态
-     * @param sourceLastModifiedTime 源文件的最后修改时间 (可能为 null)
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // 确保在新事务中执行
-    public void updateStatusOnError(Path sourceFilePath, String errorStatus, LocalDateTime sourceLastModifiedTime) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateStatusOnError(Path sourceFilePath, String errorStatus, LocalDateTime sourceLastModifiedTimeTruncated) {
         try {
-            // 再次计算路径和文件名以查找记录
             Path relativePath = sourceDirectory.relativize(sourceFilePath.getParent());
             String relativeDirPath = formatRelativePath(relativePath);
             String originalFilename = sourceFilePath.getFileName().toString();
             FileSyncMap record = fileSyncMapMapper.selectBySourcePath(relativeDirPath, originalFilename);
 
             if (record != null) {
-                // 根据是否有时间戳选择不同的更新方法
-                if (sourceLastModifiedTime != null) {
-                    fileSyncMapMapper.updateStatusAndTimestampsById(record.getId(), errorStatus, sourceLastModifiedTime);
+                if (sourceLastModifiedTimeTruncated != null) {
+                    fileSyncMapMapper.updateStatusAndTimestampsById(record.getId(), errorStatus, sourceLastModifiedTimeTruncated);
                 } else {
                     fileSyncMapMapper.updateStatusById(record.getId(), errorStatus);
                 }
                 log.warn("已在新事务中更新记录 ID {} 的状态为 {}", record.getId(), errorStatus);
             } else {
-                // 如果记录不存在，无法更新状态
                 log.warn("无法找到记录来更新错误状态: {}", sourceFilePath);
-                // 考虑是否应该在这种情况下插入一条错误记录？（通常不建议，可能导致数据不一致）
             }
-            // 新事务成功提交
         } catch (Exception dbEx) {
-            // 记录更新错误状态本身也失败了
             log.error("在新事务中为文件 {} 更新错误状态 {} 时失败。", sourceFilePath, errorStatus, dbEx);
-            // 此处不再向上抛出异常，避免影响主流程的回滚
         }
     }
 
-    /**
-     * 生成在临时目录中唯一的文件名，处理潜在的命名冲突。
-     *
-     * @param originalFilename 原始文件名
-     * @return 唯一的临时文件名
-     * @throws IllegalStateException 如果无法生成唯一名称（例如尝试次数过多）
-     */
     private String generateUniqueTempFilename(String originalFilename) {
         String baseName;
         String extension;
-        // 分离基础名和扩展名
         int dotIndex = originalFilename.lastIndexOf('.');
         if (dotIndex > 0 && dotIndex < originalFilename.length() - 1) {
             baseName = originalFilename.substring(0, dotIndex);
-            extension = originalFilename.substring(dotIndex); // 包含点 "."
+            extension = originalFilename.substring(dotIndex);
         } else {
             baseName = originalFilename;
-            extension = ""; // 没有扩展名
+            extension = "";
         }
 
         String tempFilename = originalFilename;
         int counter = 1;
-        // 循环检查数据库中是否存在该临时文件名，直到找到唯一的
         while (fileSyncMapMapper.existsByTempFilename(tempFilename)) {
-            // 添加计数后缀，格式如 "basename_1.ext"
             tempFilename = String.format("%s_%d%s", baseName, counter++, extension);
-            // 设置一个尝试上限，防止无限循环
             if (counter > 1000) {
                 log.error("尝试 1000 次后仍无法为 {} 生成唯一的临时文件名。", originalFilename);
                 throw new IllegalStateException("无法生成唯一的临时文件名。");
             }
         }
-        // 如果添加了后缀，记录警告
         if (counter > 1) {
             log.warn("为原始文件 '{}' 生成了唯一的临时文件名 '{}'", originalFilename, tempFilename);
         }
         return tempFilename;
     }
 
-    /**
-     * 将相对路径 Path 对象格式化为数据库存储的字符串格式。
-     * 使用 '/' 作为分隔符，并在非根目录路径末尾添加 '/'。
-     *
-     * @param relativePath 相对路径 Path 对象
-     * @return 格式化后的字符串路径
-     */
     private String formatRelativePath(Path relativePath) {
         String pathStr = relativePath.toString();
         if (pathStr.isEmpty()) {
-            return ""; // 根目录表示为空字符串
+            return "";
         }
-        // 将系统分隔符替换为 '/'
         pathStr = pathStr.replace(FileSystems.getDefault().getSeparator(), "/");
-        // 确保末尾有 '/'
         if (!pathStr.endsWith("/")) {
             pathStr += "/";
         }
@@ -663,173 +591,182 @@ public class FileSyncServiceImpl implements FileSyncService {
 
     // --- 定时全量扫描任务 ---
 
-    /**
-     * 定时执行全量扫描任务，对比源目录和数据库状态。
-     * 使用 @Scheduled 注解，cron 表达式从配置文件读取。
-     * 使用 @Async 注解使其在单独的线程中异步执行。
-     */
-    @Async // 异步执行，需要 TaskExecutor Bean 和 @EnableAsync
-    @Scheduled(cron = "${file.sync.scan.cron:0 0 1 * * ?}") // 从配置读取 cron，默认每天凌晨 1 点
-    @Transactional(propagation = Propagation.NEVER) // 扫描方法本身不开启事务，内部按需管理
+    @Async
+    @Scheduled(cron = "${file.sync.scan.cron:0 0 1 * * ?}")
+    @Transactional(propagation = Propagation.NEVER)
     @Override
     public void performFullScan() {
-        // 检查定时扫描功能是否启用
         if (!scanEnabled) {
             log.debug("定时扫描已在配置中禁用，跳过执行。");
             return;
         }
-        // TODO: 添加分布式锁或原子标志，防止多个实例并发执行扫描（如果应用可能部署多实例）
         log.info("开始执行定时全量扫描...");
-        long startTime = System.currentTimeMillis(); // 记录开始时间
+        long startTime = System.currentTimeMillis();
 
-        // 1. 获取文件系统的当前状态 (路径 -> 文件信息)
         Map<String, FileSystemInfo> fileSystemState = scanSourceDirectory();
         if (fileSystemState == null) {
             log.error("全量扫描失败：无法扫描源目录。");
-            return; // 扫描失败，提前退出
+            return;
         }
         log.info("全量扫描：扫描到源目录中 {} 个文件。", fileSystemState.size());
 
-        // 2. 获取数据库中相关记录的当前状态 (路径 -> 数据库记录)
         Map<String, FileSyncMap> dbState = getDatabaseState();
         log.info("全量扫描：从数据库获取到 {} 条相关记录。", dbState.size());
 
-        // 3. 对比文件系统和数据库状态，找出差异
-        List<Path> filesToProcess = new ArrayList<>(); // 需要处理的新增或修改的文件路径
-        List<Long> idsToMarkForDeletion = new ArrayList<>();   // 需要标记为待删除的数据库记录 ID
+        List<Path> filesToProcess = new ArrayList<>();
+        List<Long> idsToMarkForDeletion = new ArrayList<>();
 
-        // 3.1 遍历文件系统中的文件
         for (Map.Entry<String, FileSystemInfo> entry : fileSystemState.entrySet()) {
-            String fileKey = entry.getKey(); // "relativeDirPath||originalFilename"
+            String fileKey = entry.getKey();
             FileSystemInfo fsInfo = entry.getValue();
-            FileSyncMap dbRecord = dbState.get(fileKey); // 在数据库状态中查找对应记录
+            FileSyncMap dbRecord = dbState.get(fileKey);
 
             if (dbRecord == null) {
-                // 文件存在于文件系统，但不存在于数据库 -> 新增文件
                 log.debug("全量扫描发现新增文件: {}", fsInfo.fullPath);
                 filesToProcess.add(fsInfo.fullPath);
             } else {
-                // 文件在两边都存在，检查最后修改时间
-                if (fsInfo.lastModifiedTime != null && // 确保文件系统时间有效
-                        (dbRecord.getSourceLastModified() == null || // 如果数据库没有记录时间
-                                fsInfo.lastModifiedTime.isAfter(dbRecord.getSourceLastModified()))) { // 或文件系统时间更新
-                    // 文件已被修改
+                LocalDateTime fsLastModifiedSeconds = fsInfo.lastModifiedTime;
+                LocalDateTime dbSourceLastModified = dbRecord.getSourceLastModified();
+                LocalDateTime dbSourceLastModifiedSeconds = null;
+
+                if (dbSourceLastModified != null) {
+                    dbSourceLastModifiedSeconds = dbSourceLastModified.truncatedTo(ChronoUnit.SECONDS);
+                }
+
+                if (fsLastModifiedSeconds != null &&
+                        (dbSourceLastModifiedSeconds == null ||
+                                fsLastModifiedSeconds.isAfter(dbSourceLastModifiedSeconds))) {
                     log.debug("全量扫描发现修改文件: {}", fsInfo.fullPath);
+                    log.debug("文件系统记录时间(秒级): {}", fsLastModifiedSeconds);
+                    log.debug("数据库中记录时间(原始): {}", dbRecord.getSourceLastModified());
+                    log.debug("数据库中记录时间(秒级): {}", dbSourceLastModifiedSeconds);
                     filesToProcess.add(fsInfo.fullPath);
                 }
-                // 从数据库状态 Map 中移除已匹配的记录，方便后续找出仅存在于数据库的记录
                 dbState.remove(fileKey);
             }
         }
 
-        // 3.2 遍历数据库状态 Map 中剩余的记录
-        // 这些记录存在于数据库，但对应的文件在文件系统中未找到
         for (FileSyncMap dbRecord : dbState.values()) {
-            // 只处理状态不是 'pending_deletion' 的记录（避免重复标记）
             if (!STATUS_PENDING_DELETION.equals(dbRecord.getStatus())) {
                 log.debug("全量扫描发现数据库记录对应的源文件已删除: ID={}, Path={}{}",
                         dbRecord.getId(), dbRecord.getRelativeDirPath(), dbRecord.getOriginalFilename());
-                idsToMarkForDeletion.add(dbRecord.getId()); // 加入待标记删除列表
+                idsToMarkForDeletion.add(dbRecord.getId());
             }
         }
 
         log.info("全量扫描对比完成。发现 {} 个新增/修改的文件，{} 个待标记为删除的文件。", filesToProcess.size(), idsToMarkForDeletion.size());
 
-        // 4. 处理找出的差异
-        FileSyncService self = applicationContext.getBean(FileSyncService.class); // 获取自身代理对象
+        FileSyncService self = applicationContext.getBean(FileSyncService.class);
 
-        // 4.1 处理新增/修改的文件 (调用带事务的 handle 方法)
-        // 每个文件处理都在其自己的新事务中进行
         for (Path filePath : filesToProcess) {
             try {
-                // 通过代理调用，确保 @Transactional 生效
                 ((FileSyncServiceImpl) self).handleFileCreateOrModify(filePath);
             } catch (Exception e) {
-                // handle 方法内部会记录错误状态，这里只记录扫描任务中的错误
                 log.error("全量扫描处理文件 {} 时出错。", filePath, e);
             }
         }
 
-        // 4.2 处理待标记删除的文件 (批量更新状态)
         if (!idsToMarkForDeletion.isEmpty()) {
             try {
-                // 在新事务中批量更新状态
                 updateDeletionStatusInNewTransaction(idsToMarkForDeletion);
             } catch (Exception e) {
                 log.error("全量扫描批量标记待删除状态时出错。", e);
             }
         }
 
-        long endTime = System.currentTimeMillis(); // 记录结束时间
+        // +++ 新增阶段：处理目标目录中多余的空目录 +++
+        log.info("全量扫描：开始检查并清理目标目录中多余的空目录...");
+        try {
+            List<Path> targetSubDirs;
+            try (Stream<Path> walk = Files.walk(this.targetDirectory)) {
+                targetSubDirs = walk.filter(Files::isDirectory)
+                        .filter(p -> !p.equals(this.targetDirectory))
+                        .sorted(Comparator.reverseOrder()) // 最深的目录在前，确保先删除子目录
+                        .collect(Collectors.toList());
+            }
+
+            for (Path targetDirPath : targetSubDirs) {
+                // 对于 targetDirectory 下的每个子目录，计算其相对路径
+                Path relativeTargetDirPath = this.targetDirectory.relativize(targetDirPath);
+                // 构造对应的源目录路径
+                Path correspondingSourceDirPath = this.sourceDirectory.resolve(relativeTargetDirPath);
+
+                if (!Files.exists(correspondingSourceDirPath)) {
+                    // 如果源目录不存在
+                    try (Stream<Path> dirContents = Files.list(targetDirPath)) {
+                        if (!dirContents.findAny().isPresent()) {
+                            // 且目标目录为空，则删除目标目录
+                            try {
+                                Files.delete(targetDirPath); // 使用 Files.delete()，如果目录非空会抛出 DirectoryNotEmptyException
+                                log.info("全量扫描：已删除空的目标目录 {}", targetDirPath);
+                            } catch (DirectoryNotEmptyException dne) {
+                                // 这个警告是合理的，因为文件删除是异步的，或者目录可能包含其他未追踪的文件/目录
+                                log.warn("全量扫描：尝试删除目录 {} 失败，因为它非空。这可能是因为文件删除尚未完成，或包含未追踪的内容。", targetDirPath);
+                            } catch (IOException e) {
+                                log.error("全量扫描：删除空的目标目录 {} 时出错。", targetDirPath, e);
+                            }
+                        } else {
+                            log.debug("目标目录 {} 的源目录 {} 不存在，但目标目录非空（可能包含待删除文件或未追踪内容），暂不删除。", targetDirPath, correspondingSourceDirPath);
+                        }
+                    } catch (NoSuchFileException nsfe) {
+                        // 如果在检查 Files.list() 时目录已被并发删除（例如由另一个操作或手动），则忽略
+                        log.warn("全量扫描：检查目录 {} 内容时目录已不存在，可能已被其他进程删除。", targetDirPath);
+                    } catch (IOException e) {
+                        log.error("全量扫描：检查目录 {} 内容时出错。", targetDirPath, e);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("全量扫描：遍历目标目录以清理空目录时出错。", e);
+        }
+        log.info("全量扫描：空目录清理阶段完成。");
+        // +++ 目录清理结束 +++
+
+        long endTime = System.currentTimeMillis();
         log.info("定时全量扫描执行完毕，耗时: {} 毫秒", (endTime - startTime));
     }
 
-    /**
-     * 辅助方法：扫描源目录，返回包含文件路径和最后修改时间信息的 Map。
-     *
-     * @return Map<String, FileSystemInfo>，键为 "relativeDirPath||originalFilename"，值为 FileSystemInfo 对象。
-     * 如果扫描失败则返回 null。
-     */
     private Map<String, FileSystemInfo> scanSourceDirectory() {
         Map<String, FileSystemInfo> fileSystemState = new HashMap<>();
         try (Stream<Path> stream = Files.walk(sourceDirectory)) {
-            stream.filter(Files::isRegularFile).forEach(path -> { // 只处理普通文件
+            stream.filter(Files::isRegularFile).forEach(path -> {
                 try {
-                    // 计算相对路径和文件名
                     Path relativePath = sourceDirectory.relativize(path.getParent());
                     String relativeDirPath = formatRelativePath(relativePath);
                     String originalFilename = path.getFileName().toString();
-                    // 创建组合键
                     String key = relativeDirPath + "||" + originalFilename;
 
-                    // 获取最后修改时间
-                    LocalDateTime lastModified = LocalDateTime.ofInstant(
-                            Files.getLastModifiedTime(path).toInstant(), ZoneId.systemDefault()
-                    );
-                    // 存入 Map
-                    fileSystemState.put(key, new FileSystemInfo(path, lastModified));
+                    Instant originalInstant = Files.getLastModifiedTime(path).toInstant();
+                    Instant truncatedInstant = originalInstant.truncatedTo(ChronoUnit.SECONDS);
+                    LocalDateTime lastModifiedTruncatedToSecond = LocalDateTime.ofInstant(truncatedInstant, ZoneId.systemDefault());
+
+                    fileSystemState.put(key, new FileSystemInfo(path, lastModifiedTruncatedToSecond));
                 } catch (IOException | SecurityException | InvalidPathException e) {
-                    // 捕获可能的异常，记录错误并跳过该文件
                     log.error("扫描文件 {} 时读取属性或计算路径出错，跳过该文件。", path, e);
                 }
             });
-            return fileSystemState; // 返回扫描结果
+            return fileSystemState;
         } catch (IOException | SecurityException e) {
-            // 捕获遍历目录时发生的错误
             log.error("扫描源目录 {} 时出错。", sourceDirectory, e);
-            return null; // 返回 null 表示扫描失败
+            return null;
         }
     }
 
-    /**
-     * 辅助方法：从数据库获取用于扫描对比的相关记录状态。
-     *
-     * @return Map<String, FileSyncMap>，键为 "relativeDirPath||originalFilename"，值为 FileSyncMap 对象。
-     */
-    @Transactional(readOnly = true) // 在只读事务中执行
+    @Transactional(readOnly = true)
     protected Map<String, FileSyncMap> getDatabaseState() {
-        // 调用 Mapper 获取所有需要参与对比的记录
         List<FileSyncMap> dbRecords = fileSyncMapMapper.selectAllRelevantForScan();
-        // 将列表转换为 Map，方便按路径+文件名快速查找
-        // 使用 Function.identity() 作为 valueMapper，直接使用 FileSyncMap 对象
-        // 如果出现键冲突（理论上不应发生），保留已存在的记录
         return dbRecords.stream()
                 .collect(Collectors.toMap(
-                        record -> record.getRelativeDirPath() + "||" + record.getOriginalFilename(), // 组合键
-                        Function.identity(), // 值就是记录本身
-                        (existing, replacement) -> { // 合并函数（处理重复键）
+                        record -> record.getRelativeDirPath() + "||" + record.getOriginalFilename(),
+                        Function.identity(),
+                        (existing, replacement) -> {
                             log.warn("数据库中发现重复的路径和文件名组合: {}{}", existing.getRelativeDirPath(), existing.getOriginalFilename());
-                            return existing; // 保留已存在的
+                            return existing;
                         }
                 ));
     }
 
-    /**
-     * 辅助方法：在新事务中批量将记录状态更新为 'pending_deletion'。
-     *
-     * @param ids 要更新状态的记录 ID 列表
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // 确保在新事务中执行
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void updateDeletionStatusInNewTransaction(List<Long> ids) {
         if (!CollectionUtils.isEmpty(ids)) {
             int updatedRows = fileSyncMapMapper.batchUpdateStatus(ids, STATUS_PENDING_DELETION);
@@ -837,12 +774,9 @@ public class FileSyncServiceImpl implements FileSyncService {
         }
     }
 
-    /**
-     * 内部静态类，用于存储文件系统扫描时获取的文件信息。
-     */
     private static class FileSystemInfo {
-        final Path fullPath; // 文件的完整路径
-        final LocalDateTime lastModifiedTime; // 文件的最后修改时间
+        final Path fullPath;
+        final LocalDateTime lastModifiedTime;
 
         FileSystemInfo(Path fullPath, LocalDateTime lastModifiedTime) {
             this.fullPath = fullPath;
@@ -850,12 +784,6 @@ public class FileSyncServiceImpl implements FileSyncService {
         }
     }
 
-
-    // --- 公共服务方法 (查询和手动同步控制) ---
-
-    /**
-     * 获取待处理（待同步或待删除）的文件列表（分页）。
-     */
     @Override
     @Transactional(readOnly = true)
     public PageDto<PendingFileSyncDto> getPendingSyncFiles(int page, int size) {
@@ -864,8 +792,6 @@ public class FileSyncServiceImpl implements FileSyncService {
         if (size < 1) size = 10;
         if (size > 100) size = 100;
 
-        // !!! 注意：以下实现效率较低，建议优化 Mapper 直接查询所需状态并分页 !!!
-        // 临时方案：分别查询再合并排序
         List<FileSyncMap> pendingSyncMaps = fileSyncMapMapper.selectByStatus(STATUS_PENDING);
         List<FileSyncMap> pendingDeletionMaps = fileSyncMapMapper.selectByStatus(STATUS_PENDING_DELETION);
 
@@ -873,10 +799,8 @@ public class FileSyncServiceImpl implements FileSyncService {
         allPendingMaps.addAll(pendingSyncMaps);
         allPendingMaps.addAll(pendingDeletionMaps);
 
-        // 按最后更新时间降序排序（使最新的变更排在前面）
         allPendingMaps.sort(Comparator.comparing(FileSyncMap::getLastUpdated, Comparator.nullsLast(Comparator.reverseOrder())));
 
-        // 手动进行分页
         long totalElements = allPendingMaps.size();
         int totalPages = (size > 0) ? (int) Math.ceil((double) totalElements / size) : 0;
         int currentPage = Math.max(1, Math.min(page, totalPages == 0 ? 1 : totalPages));
@@ -884,27 +808,27 @@ public class FileSyncServiceImpl implements FileSyncService {
         int endIndex = Math.min(offset + size, (int) totalElements);
         List<FileSyncMap> mapsOnPage = (offset < endIndex) ? allPendingMaps.subList(offset, endIndex) : Collections.emptyList();
 
-        // 将实体列表转换为 DTO 列表
         List<PendingFileSyncDto> dtoList = mapsOnPage.stream()
-                .map(this::mapToPendingDto) // 调用包含 status 的映射方法
+                .map(this::mapToPendingDto)
                 .collect(Collectors.toList());
 
         log.debug("返回 {} 条待处理记录，用于页码 {}", dtoList.size(), currentPage);
         return new PageDto<>(dtoList, currentPage, size, totalElements);
     }
 
-    /**
-     * 辅助方法：将 FileSyncMap 实体映射到包含状态的 PendingFileSyncDto。
-     */
     private PendingFileSyncDto mapToPendingDto(FileSyncMap entity) {
         long fileSize = -1;
-        LocalDateTime lastModified = null;
+        LocalDateTime lastModifiedSeconds = null;
         try {
             Path tempFilePath = tempDirectory.resolve(entity.getTempFilename());
             if (Files.exists(tempFilePath)) {
                 BasicFileAttributes attrs = Files.readAttributes(tempFilePath, BasicFileAttributes.class);
                 fileSize = attrs.size();
-                lastModified = LocalDateTime.ofInstant(attrs.lastModifiedTime().toInstant(), ZoneId.systemDefault());
+
+                Instant originalInstant = attrs.lastModifiedTime().toInstant();
+                Instant truncatedInstant = originalInstant.truncatedTo(ChronoUnit.SECONDS);
+                lastModifiedSeconds = LocalDateTime.ofInstant(truncatedInstant, ZoneId.systemDefault());
+
             } else {
                 if (!STATUS_PENDING_DELETION.equals(entity.getStatus())) {
                     log.warn("临时文件 {} 未找到 (状态: {})", tempFilePath, entity.getStatus());
@@ -913,9 +837,8 @@ public class FileSyncServiceImpl implements FileSyncService {
         } catch (IOException e) {
             log.error("读取临时文件 {} 属性时出错", entity.getTempFilename(), e);
         }
-        String formattedDate = (lastModified != null) ? DateUtils.formatDateTime(DateUtils.convertlocalDateTimeToDate(lastModified)) : "N/A";
+        String formattedDate = (lastModifiedSeconds != null) ? DateUtils.formatDateTime(DateUtils.convertlocalDateTimeToDate(lastModifiedSeconds)) : "N/A";
 
-        // 返回包含 status 的 DTO
         return new PendingFileSyncDto(
                 entity.getId(),
                 entity.getTempFilename(),
@@ -923,18 +846,13 @@ public class FileSyncServiceImpl implements FileSyncService {
                 entity.getRelativeDirPath(),
                 fileSize,
                 formattedDate,
-                entity.getStatus() // 包含状态
+                entity.getStatus()
         );
     }
 
-
-    /**
-     * 获取当前文件同步服务的整体状态。
-     */
     @Override
     @Transactional(readOnly = true)
     public FileSyncStatusDto getSyncStatus() {
-        // 分别统计各种状态的数量
         long pendingCount = fileSyncMapMapper.countByStatus(STATUS_PENDING);
         long syncedCount = fileSyncMapMapper.countByStatus(STATUS_SYNCED);
         long errorCopyingCount = fileSyncMapMapper.countByStatus(STATUS_ERROR_COPYING);
@@ -942,35 +860,30 @@ public class FileSyncServiceImpl implements FileSyncService {
         long syncingCount = fileSyncMapMapper.countByStatus(STATUS_SYNCING);
         long pendingDeletionCount = fileSyncMapMapper.countByStatus(STATUS_PENDING_DELETION);
 
-        // 组装状态 DTO
         return new FileSyncStatusDto(
-                monitoringActive.get(), // 实时监控是否活动
-                pendingCount,           // 待同步数量
-                syncedCount,            // 已同步数量
-                // 将错误、进行中、待删除状态合并为需要关注的总数
+                monitoringActive.get(),
+                pendingCount,
+                syncedCount,
                 errorCopyingCount + errorSyncingCount + syncingCount + pendingDeletionCount,
-                syncProcessStatus.get(), // 手动同步进程状态
-                processedInCurrentRun.get(), // 本轮手动同步成功数
-                failedInCurrentRun.get()     // 本轮手动同步失败数
+                syncProcessStatus.get(),
+                processedInCurrentRun.get(),
+                failedInCurrentRun.get()
         );
     }
 
-    // --- 手动同步控制方法 (实现细节保持不变) ---
+    // --- 手动同步控制方法 ---
     @Override
     public FileSyncTaskControlResultDto startManualSync() {
         log.info("Attempting to start manual sync process...");
-        // Ensure only one sync process runs at a time using compareAndSet
         if (syncProcessStatus.compareAndSet("idle", "running")) {
             log.info("Starting new manual sync task.");
-            // Reset flags and counters for the new run
             pauseFlag.set(false);
             cancelFlag.set(false);
             processedInCurrentRun.set(0);
             failedInCurrentRun.set(0);
 
-            // Get self-proxy to call the @Async method
             FileSyncService self = applicationContext.getBean(FileSyncService.class);
-            Future<?> future = ((FileSyncServiceImpl) self).runSyncCycle(); // Call @Async method via proxy
+            Future<?> future = ((FileSyncServiceImpl) self).runSyncCycle();
             currentSyncTaskFuture.set(future);
 
             return new FileSyncTaskControlResultDto(true, "同步已启动。", "running");
@@ -1022,22 +935,18 @@ public class FileSyncServiceImpl implements FileSyncService {
         log.info("Attempting to stop manual sync process...");
         String currentStatus = syncProcessStatus.get();
         if ("running".equals(currentStatus) || "paused".equals(currentStatus)) {
-            // Attempt to set status to 'stopping' first to prevent new start requests
             if (syncProcessStatus.compareAndSet(currentStatus, "stopping")) {
                 cancelFlag.set(true);
-                pauseFlag.set(false); // Ensure it doesn't stay paused
+                pauseFlag.set(false);
                 log.info("Stop signal sent to manual sync process. Status set to stopping.");
 
-                // Optionally try to cancel the future task (may interrupt IO)
                 Future<?> future = currentSyncTaskFuture.get();
                 if (future != null && !future.isDone()) {
-                    future.cancel(true); // Attempt to interrupt the task thread
+                    future.cancel(true);
                     log.info("Attempted to cancel the running sync task future.");
                 }
-
                 return new FileSyncTaskControlResultDto(true, "停止信号已发送。", "stopping");
             } else {
-                // Status changed between check and set, likely finished or stopped already
                 log.warn("Could not set status to stopping, current status is now: {}", syncProcessStatus.get());
                 return new FileSyncTaskControlResultDto(false, "无法停止，当前状态已改变: " + syncProcessStatus.get() + ".", syncProcessStatus.get());
             }
@@ -1049,47 +958,35 @@ public class FileSyncServiceImpl implements FileSyncService {
 
 
     // --- Asynchronous Sync Cycle ---
-
-    /**
-     * Asynchronous method containing the main loop for processing pending files.
-     * This method runs in a separate thread managed by the TaskExecutor.
-     * It fetches files in batches and processes them.
-     */
-    @Async // Make this method run asynchronously
-    public Future<?> runSyncCycle() { // Return Future<?> or CompletableFuture<?>
+    @Async
+    public Future<?> runSyncCycle() {
         log.info("Starting asynchronous sync cycle...");
         try {
             while (!cancelFlag.get()) {
-                // Handle pause state
                 while (pauseFlag.get() && !cancelFlag.get()) {
                     try {
-                        Thread.sleep(1000); // Sleep while paused
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         log.warn("Sync cycle interrupted during pause. Checking cancel flag.");
-                        Thread.currentThread().interrupt(); // Re-interrupt
-                        if (cancelFlag.get()) break; // Exit if cancelled during sleep
+                        Thread.currentThread().interrupt();
+                        if (cancelFlag.get()) break;
                     }
                 }
-                if (cancelFlag.get()) break; // Exit if cancelled after pause
+                if (cancelFlag.get()) break;
 
-                // --- Process one batch ---
                 List<FileSyncMap> batchToProcess = selectAndProcessBatch();
 
-                // If no files were found in pending state, the sync is complete for now
                 if (CollectionUtils.isEmpty(batchToProcess)) {
                     log.info("No more pending files found in this cycle.");
-                    break; // Exit the main while loop
+                    break;
                 }
 
                 log.info("Processing batch of {} files...", batchToProcess.size());
                 for (FileSyncMap record : batchToProcess) {
                     if (cancelFlag.get()) {
                         log.info("Cancel flag detected during batch processing. Aborting current batch.");
-                        // Update status back to pending for unprocessed items in this locked batch? Or leave as 'syncing'?
-                        // Leaving as 'syncing' might be okay, next run will pick them up if needed.
-                        break; // Exit the inner for loop
+                        break;
                     }
-                    // Handle pause within the batch processing as well
                     while (pauseFlag.get() && !cancelFlag.get()) {
                         try {
                             Thread.sleep(500);
@@ -1100,38 +997,24 @@ public class FileSyncServiceImpl implements FileSyncService {
                         }
                     }
                     if (cancelFlag.get()) break;
-
-                    // Process individual file (move and update status)
                     processSingleFileSyncRecord(record);
                 }
-                // --- End of batch processing ---
-
-                // Optional: Add a small delay between batches to avoid hammering the DB/FS
-                // try { Thread.sleep(100); } catch (InterruptedException e) { /* handle */ }
-
-            } // End of main while loop
-
+            }
         } catch (Exception e) {
             log.error("Unhandled exception in asynchronous sync cycle!", e);
-            // Ensure status is reset even if an unexpected error occurs
         } finally {
             log.info("Asynchronous sync cycle finished. Processed: {}, Failed: {}. Cancelled: {}",
                     processedInCurrentRun.get(), failedInCurrentRun.get(), cancelFlag.get());
-            // Reset status to idle only if it was running or stopping
             syncProcessStatus.compareAndSet("running", "idle");
-            syncProcessStatus.compareAndSet("paused", "idle"); // If paused and then cancelled/finished
+            syncProcessStatus.compareAndSet("paused", "idle");
             syncProcessStatus.compareAndSet("stopping", "idle");
-            currentSyncTaskFuture.set(null); // Clear the future reference
-            // Do NOT reset cancel/pause flags here, let startManualSync do it
+            currentSyncTaskFuture.set(null);
         }
-        return null; // Or return a CompletableFuture result if needed
+        return null;
     }
 
     /**
      * Selects a batch of pending files, locks them by updating status to 'syncing'.
-     * Uses programmatic transaction management.
-     *
-     * @return List of FileSyncMap records to process, or empty list if none found.
      */
     private List<FileSyncMap> selectAndProcessBatch() {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
@@ -1144,10 +1027,9 @@ public class FileSyncServiceImpl implements FileSyncService {
                 List<Long> idsToUpdate = batch.stream().map(FileSyncMap::getId).collect(Collectors.toList());
                 int updatedRows = fileSyncMapMapper.batchUpdateStatus(idsToUpdate, STATUS_SYNCING);
                 if (updatedRows != batch.size()) {
-                    // This case should ideally not happen with SKIP LOCKED if locking works correctly
                     log.error("Mismatch between locked rows ({}) and updated rows ({}). Rolling back batch selection.", batch.size(), updatedRows);
-                    transactionManager.rollback(status); // Rollback the status update
-                    return Collections.emptyList(); // Return empty to avoid processing potentially unlocked rows
+                    transactionManager.rollback(status);
+                    return Collections.emptyList();
                 }
                 log.debug("Locked and updated status to 'syncing' for {} records.", updatedRows);
             }
@@ -1160,55 +1042,48 @@ public class FileSyncServiceImpl implements FileSyncService {
             } catch (Exception rbEx) {
                 log.error("Error during rollback of batch selection.", rbEx);
             }
-            return Collections.emptyList(); // Return empty on error
+            return Collections.emptyList();
         }
     }
 
 
     /**
      * Processes a single FileSyncMap record: moves the file and updates its status.
-     * Uses programmatic transaction for the final status update.
+     * 当前逻辑:
+     * 文件从 tempDirectory 移动到 targetDirectory.
+     * 如果成功，finalStatus 设置为 STATUS_SYNCED.
+     * 调用 updateFileSyncStatusInNewTransaction(record.getId(), finalStatus) 在新事务中更新数据库状态
      */
     private void processSingleFileSyncRecord(FileSyncMap record) {
         Path tempFilePath = tempDirectory.resolve(record.getTempFilename());
-        String finalStatus = STATUS_ERROR_SYNCING; // Default to error
+        String finalStatus = STATUS_ERROR_SYNCING;
 
         try {
             if (!Files.exists(tempFilePath)) {
                 log.error("Temporary file {} for record ID {} not found. Setting status to error.", tempFilePath, record.getId());
-                // Status already defaults to error, just log and proceed to update DB
             } else {
-                // Determine final target path and filename
                 String targetFilename = generateTargetFilename(record.getOriginalFilename());
                 Path targetPath = targetDirectory.resolve(record.getRelativeDirPath()).resolve(targetFilename).normalize();
 
-                // Security check: Ensure target is within the target directory
                 if (!targetPath.startsWith(targetDirectory)) {
                     log.error("Target path traversal attempt for record ID {}: {}", record.getId(), targetPath);
-                    // Status remains error_syncing
                 } else {
-                    // Ensure parent directories exist
                     Files.createDirectories(targetPath.getParent());
-
-                    // Move the file (atomic operation on most systems)
-                    Files.move(tempFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING); // Overwrite if exists
+                    Files.move(tempFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
                     log.info("Successfully moved temp file {} to target {}", tempFilePath, targetPath);
-                    finalStatus = STATUS_SYNCED; // Set status to success
-                    processedInCurrentRun.incrementAndGet(); // Increment success counter
+                    finalStatus = STATUS_SYNCED;
+                    processedInCurrentRun.incrementAndGet();
                 }
             }
         } catch (IOException e) {
             log.error("IOException during file move for record ID {}. Temp: {}, Target attempt: {}. Setting status to error.",
                     record.getId(), tempFilePath, record.getRelativeDirPath() + generateTargetFilename(record.getOriginalFilename()), e);
-            // Status remains error_syncing
         } catch (Exception e) {
             log.error("Unexpected exception during file processing for record ID {}. Setting status to error.", record.getId(), e);
-            // Status remains error_syncing
         }
 
-        // Update status in a new transaction
         if (STATUS_ERROR_SYNCING.equals(finalStatus)) {
-            failedInCurrentRun.incrementAndGet(); // Increment failure counter only if error occurred here
+            failedInCurrentRun.incrementAndGet();
         }
         updateFileSyncStatusInNewTransaction(record.getId(), finalStatus);
     }
@@ -1245,13 +1120,13 @@ public class FileSyncServiceImpl implements FileSyncService {
         if (StringUtils.hasText(targetFilenameRemoveSuffix) && originalFilename.endsWith(targetFilenameRemoveSuffix)) {
             return originalFilename.substring(0, originalFilename.length() - targetFilenameRemoveSuffix.length());
         }
-        return originalFilename; // Return original if no suffix rule matches
+        return originalFilename;
     }
 
 
-    // --- 用户确认删除的处理方法 (实现细节保持不变) ---
+    // --- 用户确认删除的处理方法 ---
     @Override
-    @Transactional(propagation = Propagation.NEVER) // 方法内部自己管理事务
+    @Transactional(propagation = Propagation.NEVER)
     public void confirmAndDeleteFiles(List<Long> idsToConfirm) {
         log.info("开始处理用户确认删除的 {} 条记录...", idsToConfirm != null ? idsToConfirm.size() : 0);
         if (CollectionUtils.isEmpty(idsToConfirm)) {
@@ -1267,7 +1142,6 @@ public class FileSyncServiceImpl implements FileSyncService {
                 failCount++;
                 continue;
             }
-            // 调用处理单个删除的方法
             boolean deleted = processSingleDeletionConfirmation(id);
             if (deleted) {
                 successCount++;
@@ -1276,27 +1150,24 @@ public class FileSyncServiceImpl implements FileSyncService {
             }
         }
         log.info("用户确认删除处理完成。成功: {}, 失败: {}", successCount, failCount);
-        // 可以考虑返回更详细的结果
     }
 
     /**
      * 处理单个文件的删除确认（包含文件删除和DB记录删除）。
-     * 使用编程式事务管理。
+     * 当前逻辑:
      *
-     * @param id 记录 ID
-     * @return true 如果成功删除，否则 false
+     * 查询并验证记录状态。
+     * 删除目标目录中的文件。
+     * 删除临时目录中的文件。
+     * 从数据库中删除记录 (fileSyncMapMapper.deleteById(id)).
+     * 提交事务 (transactionManager.commit(txStatus)).
      */
     private boolean processSingleDeletionConfirmation(Long id) {
-        // 定义新事务
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         TransactionStatus txStatus = transactionManager.getTransaction(def);
         FileSyncMap record = null;
 
         try {
-            // 1. 查询并验证记录状态 (在事务内执行)
-            // 注意：需要确保 Mapper 有 selectById 方法，或者修改这里的查询逻辑
-            // record = fileSyncMapMapper.selectById(id); // 假设存在此方法
-            // 临时替代方案 (效率低):
             record = fileSyncMapMapper.selectByStatus(STATUS_PENDING_DELETION)
                     .stream()
                     .filter(r -> r.getId().equals(id))
@@ -1305,14 +1176,12 @@ public class FileSyncServiceImpl implements FileSyncService {
 
             if (record == null) {
                 log.warn("确认删除失败：未找到 ID 为 {} 的记录，或其状态不是 '{}'。", id, STATUS_PENDING_DELETION);
-                transactionManager.rollback(txStatus); // 回滚事务
+                transactionManager.rollback(txStatus);
                 return false;
             }
 
-            // 2. 删除解密目录中的对应文件
             String targetFilename = generateTargetFilename(record.getOriginalFilename());
             Path targetFilePath = targetDirectory.resolve(record.getRelativeDirPath()).resolve(targetFilename).normalize();
-            // 安全性检查
             if (!targetFilePath.startsWith(targetDirectory)) {
                 log.error("确认删除失败：目标路径 {} 超出范围。", targetFilePath);
                 transactionManager.rollback(txStatus);
@@ -1327,7 +1196,6 @@ public class FileSyncServiceImpl implements FileSyncService {
                 return false;
             }
 
-            // 3. 删除临时目录中的对应文件
             Path tempFilePath = tempDirectory.resolve(record.getTempFilename());
             try {
                 boolean tempDeleted = Files.deleteIfExists(tempFilePath);
@@ -1338,31 +1206,25 @@ public class FileSyncServiceImpl implements FileSyncService {
                 return false;
             }
 
-            // 4. 从数据库中删除该记录
             int deletedRows = fileSyncMapMapper.deleteById(id);
             if (deletedRows == 0) {
-                // 理论上不应发生，因为前面已查到记录
                 log.warn("确认删除失败：删除数据库记录 ID {} 时未找到或已被删除。", id);
                 transactionManager.rollback(txStatus);
                 return false;
             }
 
-            // 5. 提交事务
             transactionManager.commit(txStatus);
             log.info("已成功确认并删除与记录 ID {} 相关的文件和数据。", id);
             return true;
 
         } catch (Exception e) {
-            // 捕获任何意外错误
             log.error("处理删除确认 ID {} 时发生意外错误。", id, e);
             try {
-                // 尝试回滚事务
                 transactionManager.rollback(txStatus);
             } catch (Exception rbEx) {
                 log.error("回滚删除确认事务 ID {} 时出错。", id, rbEx);
             }
-            return false; // 返回失败
+            return false;
         }
     }
-
 }

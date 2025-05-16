@@ -246,6 +246,137 @@ const fileManageSync = (() => {
         }
     };
 
+    const batchClearPendingBtn = document.getElementById('batch-clear-pending-btn');
+
+    /**
+     * 处理批量清理当前页面可见的待删除文件。
+     */
+    const handleBatchClearVisiblePending = async () => { // 使用 async 以便内部使用 await
+        if (!pendingTableBody) {
+            console.error("待处理文件表格主体 (tbody) 未找到。");
+            fileManageUI.updateBatchDeleteProgressDisplay({ statusText: "错误：表格未找到" }, true);
+            return;
+        }
+
+        // 1. 收集当前表格中所有带有 'btn-confirm-delete' 按钮的行（这些是UI上标记为待删除的）
+        const rowsToDelete = pendingTableBody.querySelectorAll('tr td button.btn-confirm-delete');
+        const recordIdsToDelete = [];
+        rowsToDelete.forEach(button => {
+            const row = button.closest('tr');
+            if (row && row.dataset.id) {
+                // 确保按钮仍然可见且行未被标记为正在移除 (以防用户快速连点)
+                if (!row.classList.contains('removing') && button.offsetParent !== null) {
+                    recordIdsToDelete.push(row.dataset.id);
+                }
+            }
+        });
+
+        if (recordIdsToDelete.length === 0) {
+            alert('当前页面没有待删除的文件可供批量处理。');
+            fileManageUI.updateBatchDeleteProgressDisplay({ statusText: "无待处理文件" }, false); // 可以选择隐藏或显示无文件
+            return;
+        }
+
+        // 2. 用户确认
+        fileManageUI.showGeneralConfirmationModal(
+            '确认批量删除',
+            `您确定要删除当前列表中的 ${recordIdsToDelete.length} 个待删除文件吗？此操作将逐个执行，且不可恢复。`,
+            async () => { // 确认后的回调也设为 async
+                if (batchClearPendingBtn) batchClearPendingBtn.disabled = true;
+                // 禁用其他可能冲突的同步按钮
+                if (startSyncBtn) startSyncBtn.disabled = true;
+                if (pauseResumeSyncBtn) pauseResumeSyncBtn.disabled = true;
+                if (stopSyncBtn) stopSyncBtn.disabled = true;
+
+
+                let totalToDelete = recordIdsToDelete.length;
+                let processedCount = 0;
+                let successCount = 0;
+                let failCount = 0;
+
+                fileManageUI.updateBatchDeleteProgressDisplay({
+                    total: totalToDelete,
+                    processed: processedCount,
+                    success: successCount,
+                    fail: failCount,
+                    statusText: '开始处理...'
+                }, true);
+
+                // 3. 循环执行删除
+                for (const recordId of recordIdsToDelete) {
+                    processedCount++;
+                    fileManageUI.updateBatchDeleteProgressDisplay({
+                        total: totalToDelete,
+                        processed: processedCount,
+                        success: successCount,
+                        fail: failCount,
+                        statusText: `正在删除 ID: <span class="math-inline">\{recordId\} \(</span>{processedCount}/${totalToDelete})`
+                    }, true);
+
+                    try {
+                        // 调用已有的单个删除API，API期望一个数组
+                        const response = await fileManageApi.confirmDelete([parseInt(recordId, 10)]);
+                        console.log(`Sync Module: Batch Deletion API response for ID ${recordId}:`, response);
+                        // 假设API成功响应包含 success:true 或类似，或者不抛出错误即为成功
+                        // filemanage_api.js中的handleResponse会在非ok时reject
+                        // 如果API返回的response.message指示成功，也可以用它
+                        if (response && (response.success || response.message?.includes("成功"))) { // 根据实际API响应调整判断条件
+                            successCount++;
+                            fileManageUI.removePendingTableRow(recordId); // 从UI移除行
+                        } else {
+                            // 即使API调用本身是200 OK，但业务逻辑上可能失败
+                            failCount++;
+                            console.warn(`Sync Module: Deletion for ID ${recordId} reported as failed by API or response unclear:`, response);
+                            // 可以在这里给对应的行添加一个失败标记，而不是移除
+                            const failedRow = pendingTableBody.querySelector(`tr[data-id="${recordId}"]`);
+                            if (failedRow) {
+                                const statusCell = failedRow.querySelector('td:nth-child(5)'); // 假设状态在第5列
+                                if (statusCell) statusCell.innerHTML = '<span class="text-danger">删除失败</span>';
+                                const actionCell = failedRow.querySelector('td:last-child button.btn-confirm-delete');
+                                if(actionCell) actionCell.disabled = true; // 禁用该失败项的删除按钮
+                            }
+                        }
+                    } catch (error) {
+                        failCount++;
+                        console.error(`Sync Module: Error batch deleting record ID ${recordId}:`, error);
+                        // 标记UI中的对应行为删除失败
+                        const failedRow = pendingTableBody.querySelector(`tr[data-id="${recordId}"]`);
+                        if (failedRow) {
+                            const statusCell = failedRow.querySelector('td:nth-child(5)');
+                            if (statusCell) statusCell.innerHTML = '<span class="text-danger">删除出错</span>';
+                            const actionCell = failedRow.querySelector('td:last-child button.btn-confirm-delete');
+                            if(actionCell) actionCell.disabled = true;
+                        }
+                    }
+
+                    fileManageUI.updateBatchDeleteProgressDisplay({
+                        total: totalToDelete,
+                        processed: processedCount,
+                        success: successCount,
+                        fail: failCount,
+                        statusText: `正在处理... (<span class="math-inline">\{processedCount\}/</span>{totalToDelete})`
+                    }, true);
+                } // 结束循环
+
+                // 4. 完成后更新状态
+                const finalStatusText = `批量删除完成。成功: ${successCount}, 失败: ${failCount}。`;
+                fileManageUI.updateBatchDeleteProgressDisplay({
+                    total: totalToDelete,
+                    processed: processedCount,
+                    success: successCount,
+                    fail: failCount,
+                    statusText: finalStatusText
+                }, true);
+                alert(finalStatusText);
+
+                if (batchClearPendingBtn) batchClearPendingBtn.disabled = false;
+                // 根据主同步状态重新启用其他同步按钮
+                updateSyncStatus(); // 调用此函数会根据当前主同步状态正确设置按钮
+            }
+        );
+    };
+
+
     // --- Initialization ---
     const init = () => {
         console.log('Initializing File Manage Sync Module...');
@@ -263,6 +394,11 @@ const fileManageSync = (() => {
         if (pendingTableBody) {
             pendingTableBody.removeEventListener('click', handleConfirmDeleteDelegation); // 移除旧的（如果有）
             pendingTableBody.addEventListener('click', handleConfirmDeleteDelegation); // 添加新的
+        }
+
+        // 绑定批量删除按钮监听
+        if (batchClearPendingBtn) {
+            batchClearPendingBtn.addEventListener('click', handleBatchClearVisiblePending);
         }
 
         // 初始加载和状态检查

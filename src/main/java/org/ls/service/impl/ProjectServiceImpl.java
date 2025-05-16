@@ -302,6 +302,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     // --- Private Helper Methods ---
 
+    // 用以在页面中展示项目状态的计算逻辑实现。
     private String calculateProjectStatus(Map<String, Object> latestTaskInfo, Long projectId) {
         if (latestTaskInfo == null) {
             if (taskMapper.countTasksByProjectId(projectId) == 0) {
@@ -315,7 +316,8 @@ public class ProjectServiceImpl implements ProjectService {
         return switch (latestStatus) {
             case "已暂停" -> "已暂停";
             case "已取消" -> "已取消";
-            case "已完成" -> "进行中"; // Simplified logic
+            case "已完成" -> "已完成";
+            case "待办" -> "待办";
             default -> "进行中";
         };
     }

@@ -28,6 +28,14 @@ const fileManageUI = (() => {
     const STATUS_PENDING_DELETION = "pending_deletion"; // 定义待删除状态常量
 
     // --- 私有辅助函数 ---
+    // --- DOM 元素选择器 (补充) ---
+    const batchDeleteProgressInfoDiv = document.getElementById('batch-delete-progress-info');
+    const batchDeleteTotalSpan = document.getElementById('batch-delete-total');
+    const batchDeleteProcessedSpan = document.getElementById('batch-delete-processed');
+    const batchDeleteSuccessSpan = document.getElementById('batch-delete-success');
+    const batchDeleteFailSpan = document.getElementById('batch-delete-fail');
+    const batchDeleteStatusSpan = document.getElementById('batch-delete-status');
+
 
     /**
      * 格式化文件大小
@@ -398,6 +406,25 @@ const fileManageUI = (() => {
         }
     };
 
+    /**
+     * 更新批量删除操作的进度显示。
+     * @param {object} progress - 包含 total, processed, success, fail, statusText 的对象。
+     * @param {boolean} [show=true] - 是否显示进度区域。
+     */
+    const updateBatchDeleteProgressDisplay = (progress, show = true) => {
+        if (batchDeleteProgressInfoDiv) {
+            batchDeleteProgressInfoDiv.style.display = show ? 'block' : 'none';
+            if (show && progress) {
+                if (batchDeleteTotalSpan) batchDeleteTotalSpan.textContent = progress.total ?? '0';
+                if (batchDeleteProcessedSpan) batchDeleteProcessedSpan.textContent = progress.processed ?? '0';
+                if (batchDeleteSuccessSpan) batchDeleteSuccessSpan.textContent = progress.success ?? '0';
+                if (batchDeleteFailSpan) batchDeleteFailSpan.textContent = progress.fail ?? '0';
+                if (batchDeleteStatusSpan) batchDeleteStatusSpan.textContent = progress.statusText ?? '未开始';
+            }
+        }
+    };
+
+
     // --- 公共接口 ---
     // 暴露需要被其他模块调用的函数
     return {
@@ -406,7 +433,19 @@ const fileManageUI = (() => {
         updatePendingFilesTable, // 更新后的函数，支持状态和删除按钮
         updateSyncStatusDisplay,
         removePendingTableRow, // 暴露移除行的函数
-        updateSyncButtons // 可能需要暴露以供外部调用（例如出错时）
+        updateSyncButtons, // 可能需要暴露以供外部调用（例如出错时）
+        updateBatchDeleteProgressDisplay,  //批量执行页面待删除文件的删除操作
+
+        // 确保 mapStatusToText 和其他需要的辅助函数也在作用域内或已暴露
+        // 如果需要通用确认模态框，确保它已存在或在此处添加
+        // 例如:
+        showGeneralConfirmationModal: (title, message, onConfirm) => {
+            // 假设你有一个通用的模态框HTML结构，并用JS控制它
+            // 这里用 window.confirm 作为简单替代
+            if (window.confirm(`<span class="math-inline">\{title\}\\n\\n</span>{message}`)) {
+                onConfirm();
+            }
+        }
     };
 
 })();

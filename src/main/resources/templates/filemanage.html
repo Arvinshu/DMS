@@ -62,9 +62,19 @@
                         <span class="me-3">本次成功: <strong id="sync-success-count">0</strong></span>
                         <span>本次失败: <strong id="sync-fail-count">0</strong></span>
                     </div>
+                    <div id="batch-delete-progress-info" class="mt-2 mb-3 p-2 border rounded" style="display: none;"> <h5>批量删除进度:</h5>
+                        <span>总计待处理: <strong id="batch-delete-total">0</strong></span> |
+                        <span>已处理: <strong id="batch-delete-processed">0</strong></span> |
+                        <span>成功: <strong id="batch-delete-success" class="text-success">0</strong></span> |
+                        <span>失败: <strong id="batch-delete-fail" class="text-danger">0</strong></span> |
+                        <span>状态: <strong id="batch-delete-status">未开始</strong></span>
+                    </div>
+
                     <div class="sync-buttons">
                         <button id="start-sync-btn" class="btn btn-success me-2">开始同步</button>
-                        <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button> <button id="stop-sync-btn" class="btn btn-danger" disabled>停止</button> </div>
+                        <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button> <button id="stop-sync-btn" class="btn btn-danger" disabled>停止</button>
+                        <button id="batch-clear-pending-btn" class="btn btn-info ms-2">批量清理当前页待删除</button>
+                    </div>
                 </div>
 
                 <div id="pending-table-container" class="table-container">

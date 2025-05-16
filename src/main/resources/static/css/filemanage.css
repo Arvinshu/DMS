@@ -485,3 +485,21 @@
     transform: translateY(1px);
     box-shadow: 0 2px 4px rgba(59,130,246,0.2);
 }
+
+#batch-delete-progress-info {
+    background-color: #f8f9fa; /* 淡灰色背景 */
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+}
+
+#batch-delete-progress-info h5 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1em;
+}
+
+#batch-delete-progress-info span {
+    margin-right: 10px;
+}
