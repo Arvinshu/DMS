@@ -8,6 +8,8 @@
  */
 package org.ls.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.task.TaskExecutor; // 引入 Spring 的 TaskExecutor
+import org.springframework.kafka.core.KafkaTemplate; // +++ 引入 KafkaTemplate +++
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled; // 引入 Scheduled 注解
 import org.springframework.stereotype.Service;
@@ -38,18 +41,19 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.*;
-        import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant; // 引入 Instant
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit; // +++ 引入 ChronoUnit 用于时间截断 +++
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID; // 用于生成 eventId
 import java.util.concurrent.ConcurrentHashMap; // 使用线程安全的 Map
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -58,6 +62,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function; // 引入 Function
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 
 @Service
 @Slf4j // 使用 Lombok 添加日志
@@ -69,6 +74,10 @@ public class FileSyncServiceImpl implements FileSyncService {
     private final TaskExecutor taskExecutor; // Spring 任务执行器，用于异步处理
     private final PlatformTransactionManager transactionManager; // 平台事务管理器，用于编程式事务
     private final ApplicationContext applicationContext; // 应用上下文，用于获取自身代理以调用 @Async/@Transactional 方法
+
+    // +++ 注入 KafkaTemplate 和 ObjectMapper +++
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper; // Jackson ObjectMapper for JSON conversion
 
     // --- 目录路径配置 ---
     private final Path sourceDirectory; // 加密源文件目录
@@ -103,20 +112,27 @@ public class FileSyncServiceImpl implements FileSyncService {
     private static final String STATUS_SYNCING = "syncing";             // 正在被手动同步任务处理中
     private static final String STATUS_PENDING_DELETION = "pending_deletion"; // 源文件已删除，等待用户确认删除目标文件
 
+    // +++ 定义 Kafka Topic 名称常量 +++
+    private static final String TOPIC_FILE_UPSERT_EVENTS = "dms-file-upsert-events";
+    private static final String TOPIC_FILE_DELETE_EVENTS = "dms-file-delete-events";
 
     /**
      * 构造函数，注入所有依赖项并初始化配置。
      */
     @Autowired
     public FileSyncServiceImpl(FileSyncMapMapper fileSyncMapMapper, Environment env,
-                               @Qualifier("taskExecutor") TaskExecutor taskExecutor, // 指定 TaskExecutor Bean 名称
+                               @Qualifier("taskExecutor") TaskExecutor taskExecutor,
                                PlatformTransactionManager transactionManager,
-                               ApplicationContext applicationContext) {
+                               ApplicationContext applicationContext,
+                               KafkaTemplate<String, String> kafkaTemplate, // +++ 注入 KafkaTemplate +++
+                               ObjectMapper objectMapper) { // +++ 注入 ObjectMapper +++
         this.fileSyncMapMapper = fileSyncMapMapper;
         this.env = env;
         this.taskExecutor = taskExecutor;
         this.transactionManager = transactionManager;
         this.applicationContext = applicationContext;
+        this.kafkaTemplate = kafkaTemplate; // +++ 赋值 +++
+        this.objectMapper = objectMapper;   // +++ 赋值 +++
 
         // 读取并验证目录配置
         this.sourceDirectory = getRequiredDirectoryPath("file.sync.source-dir");
@@ -458,13 +474,11 @@ public class FileSyncServiceImpl implements FileSyncService {
                 log.debug("准备为新文件 {} 生成记录，临时文件名: {}", sourceFilePath, tempFilename);
             } else {
                 tempFilename = existingRecord.getTempFilename();
-
                 LocalDateTime dbSourceLastModified = existingRecord.getSourceLastModified();
                 LocalDateTime dbSourceLastModifiedTruncatedToSecond = null;
                 if (dbSourceLastModified != null) {
                     dbSourceLastModifiedTruncatedToSecond = dbSourceLastModified.truncatedTo(ChronoUnit.SECONDS);
                 }
-
                 if (sourceLastModifiedTimeTruncated.equals(dbSourceLastModifiedTruncatedToSecond) &&
                         (STATUS_PENDING.equals(existingRecord.getStatus()) || STATUS_SYNCED.equals(existingRecord.getStatus()))) {
                     log.debug("源文件 {} 未更改(秒级比较)或状态无需更新，跳过处理。", sourceFilePath);
@@ -486,7 +500,6 @@ public class FileSyncServiceImpl implements FileSyncService {
                 fileSyncMapMapper.updateStatusAndTimestampsById(existingRecord.getId(), STATUS_PENDING, sourceLastModifiedTimeTruncated);
                 log.debug("已更新记录状态为 pending，temp 文件名: {}，源文件修改时间(秒级): {}", tempFilename, sourceLastModifiedTimeTruncated);
             }
-
         } catch (NoSuchFileException e) {
             log.warn("处理创建/修改事件时文件 {} 已消失。", sourceFilePath, e);
         } catch (IOException e) {
@@ -1057,6 +1070,9 @@ public class FileSyncServiceImpl implements FileSyncService {
     private void processSingleFileSyncRecord(FileSyncMap record) {
         Path tempFilePath = tempDirectory.resolve(record.getTempFilename());
         String finalStatus = STATUS_ERROR_SYNCING;
+        Path targetPathGlobal = null;
+        long targetFileSizeInBytes = -1;
+        long targetFileLastModifiedEpochSeconds = -1;
 
         try {
             if (!Files.exists(tempFilePath)) {
@@ -1064,6 +1080,7 @@ public class FileSyncServiceImpl implements FileSyncService {
             } else {
                 String targetFilename = generateTargetFilename(record.getOriginalFilename());
                 Path targetPath = targetDirectory.resolve(record.getRelativeDirPath()).resolve(targetFilename).normalize();
+                targetPathGlobal = targetPath;
 
                 if (!targetPath.startsWith(targetDirectory)) {
                     log.error("Target path traversal attempt for record ID {}: {}", record.getId(), targetPath);
@@ -1073,6 +1090,10 @@ public class FileSyncServiceImpl implements FileSyncService {
                     log.info("Successfully moved temp file {} to target {}", tempFilePath, targetPath);
                     finalStatus = STATUS_SYNCED;
                     processedInCurrentRun.incrementAndGet();
+
+                    BasicFileAttributes attrs = Files.readAttributes(targetPath, BasicFileAttributes.class);
+                    targetFileSizeInBytes = attrs.size();
+                    targetFileLastModifiedEpochSeconds = attrs.lastModifiedTime().toInstant().truncatedTo(ChronoUnit.SECONDS).getEpochSecond();
                 }
             }
         } catch (IOException e) {
@@ -1085,31 +1106,42 @@ public class FileSyncServiceImpl implements FileSyncService {
         if (STATUS_ERROR_SYNCING.equals(finalStatus)) {
             failedInCurrentRun.incrementAndGet();
         }
-        updateFileSyncStatusInNewTransaction(record.getId(), finalStatus);
+        updateFileSyncStatusInNewTransaction(record.getId(), finalStatus, record,
+                targetPathGlobal, targetFileSizeInBytes, targetFileLastModifiedEpochSeconds);
     }
 
     /**
      * Updates the status of a single record in a new transaction.
+     * And publishes Kafka event if successful and status is SYNCED.
      */
-    private void updateFileSyncStatusInNewTransaction(Long id, String status) {
+    private void updateFileSyncStatusInNewTransaction(Long id, String status, FileSyncMap recordForEvent,
+                                                      Path targetFullPathForEvent, long targetSizeForEvent, long targetModTimeForEvent) {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         TransactionStatus txStatus = transactionManager.getTransaction(def);
         try {
             int updated = fileSyncMapMapper.updateStatusById(id, status);
-            transactionManager.commit(txStatus);
+            transactionManager.commit(txStatus); // Commit DB transaction first
             if (updated > 0) {
                 log.debug("Updated status to '{}' for record ID {}", status, id);
+                if (STATUS_SYNCED.equals(status) && recordForEvent != null && targetFullPathForEvent != null) {
+                    // +++ 调用 Kafka 事件发布 +++
+                    publishFileUpsertEvent(recordForEvent, targetFullPathForEvent, targetSizeForEvent, targetModTimeForEvent);
+                    log.info("已成功在消息队列发布'{}'新增事件。", id);
+                }
             } else {
                 log.warn("Could not update status to '{}' for record ID {} (record might have been deleted concurrently?)", status, id);
             }
         } catch (Exception e) {
             log.error("Failed to update status to '{}' for record ID {}. Rolling back status update.", status, id, e);
             try {
-                transactionManager.rollback(txStatus);
+                if (!txStatus.isCompleted()) { // 确保事务未完成才回滚
+                    transactionManager.rollback(txStatus);
+                }
             } catch (Exception rbEx) {
                 log.error("Error during rollback of status update for record ID {}.", id, rbEx);
             }
+            // 如果DB提交失败，就不应该发送Kafka消息
         }
     }
 
@@ -1188,8 +1220,8 @@ public class FileSyncServiceImpl implements FileSyncService {
                 return false;
             }
             try {
-                boolean targetDeleted = Files.deleteIfExists(targetFilePath);
-                log.info("删除解密文件 {} (成功: {})", targetFilePath, targetDeleted);
+                Files.deleteIfExists(targetFilePath); // 尝试删除目标文件
+                log.info("删除解密文件 {} (尝试操作)", targetFilePath);
             } catch (IOException | SecurityException e) {
                 log.error("确认删除失败：删除解密文件 {} 时出错。", targetFilePath, e);
                 transactionManager.rollback(txStatus);
@@ -1198,8 +1230,8 @@ public class FileSyncServiceImpl implements FileSyncService {
 
             Path tempFilePath = tempDirectory.resolve(record.getTempFilename());
             try {
-                boolean tempDeleted = Files.deleteIfExists(tempFilePath);
-                log.info("删除临时文件 {} (成功: {})", tempFilePath, tempDeleted);
+                Files.deleteIfExists(tempFilePath); // 尝试删除临时文件
+                log.info("删除临时文件 {} (尝试操作)", tempFilePath);
             } catch (IOException | SecurityException e) {
                 log.error("确认删除失败：删除临时文件 {} 时出错。", tempFilePath, e);
                 transactionManager.rollback(txStatus);
@@ -1213,18 +1245,117 @@ public class FileSyncServiceImpl implements FileSyncService {
                 return false;
             }
 
-            transactionManager.commit(txStatus);
+            transactionManager.commit(txStatus); // 提交数据库事务
             log.info("已成功确认并删除与记录 ID {} 相关的文件和数据。", id);
+
+            // +++ 在数据库事务成功提交后，发布删除事件 +++
+            publishFileDeleteEvent(record);
+            log.info("已成功在消息队列发布 {} 删除事件。", id);
             return true;
 
         } catch (Exception e) {
             log.error("处理删除确认 ID {} 时发生意外错误。", id, e);
             try {
-                transactionManager.rollback(txStatus);
+                if (!txStatus.isCompleted()) {
+                    transactionManager.rollback(txStatus);
+                }
             } catch (Exception rbEx) {
                 log.error("回滚删除确认事务 ID {} 时出错。", id, rbEx);
             }
             return false;
+        }
+    }
+
+    // +++ 新增 Kafka 事件发布辅助方法 (已在Canvas中定义，这里是实际实现) +++
+    private void publishFileUpsertEvent(FileSyncMap fileRecord, Path targetFullPath, long targetSize, long targetModTimeEpochSeconds) {
+        String eventId = UUID.randomUUID().toString();
+        String esDocumentId = generateElasticsearchDocumentId(fileRecord.getRelativeDirPath(), fileRecord.getOriginalFilename());
+
+        Map<String, Object> messagePayload = new HashMap<>();
+        messagePayload.put("eventId", eventId);
+        messagePayload.put("eventType", "FILE_UPSERTED");
+        messagePayload.put("eventTimestamp", Instant.now().toString());
+        messagePayload.put("fileSyncMapId", fileRecord.getId());
+        messagePayload.put("sourceRelativePath", fileRecord.getRelativeDirPath());
+        messagePayload.put("sourceFilename", fileRecord.getOriginalFilename()); // 这是源（加密）文件名
+
+        Path targetRelativeDir = targetDirectory.relativize(targetFullPath.getParent());
+        messagePayload.put("targetRelativePath", formatRelativePath(targetRelativeDir));
+        messagePayload.put("targetFilename", targetFullPath.getFileName().toString()); // 这是目标（解密后）文件名
+        messagePayload.put("targetFileSizeInBytes", targetSize);
+        messagePayload.put("targetFileLastModifiedEpochSeconds", targetModTimeEpochSeconds);
+        messagePayload.put("elasticsearchDocumentId", esDocumentId);
+
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(messagePayload);
+            log.info("Publishing FILE_UPSERTED event to Kafka topic '{}' with key '{}': {}", TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage);
+            kafkaTemplate.send(TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage); // 使用 esDocumentId 作为 Kafka key
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing FILE_UPSERTED event to JSON for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+        } catch (Exception e) { // KafkaException 等
+            log.error("Error publishing FILE_UPSERTED event to Kafka for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+            // 考虑更复杂的错误处理，如重试或发送到死信队列，但对于初版，记录日志是基础
+        }
+    }
+
+    private void publishFileDeleteEvent(FileSyncMap fileRecord) {
+        String eventId = UUID.randomUUID().toString();
+        String esDocumentId = generateElasticsearchDocumentId(fileRecord.getRelativeDirPath(), fileRecord.getOriginalFilename());
+
+        Map<String, Object> messagePayload = new HashMap<>();
+        messagePayload.put("eventId", eventId);
+        messagePayload.put("eventType", "FILE_DELETED");
+        messagePayload.put("eventTimestamp", Instant.now().toString());
+        messagePayload.put("elasticsearchDocumentId", esDocumentId);
+        messagePayload.put("sourceRelativePath", fileRecord.getRelativeDirPath());
+        messagePayload.put("sourceFilename", fileRecord.getOriginalFilename());
+
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(messagePayload);
+            log.info("Publishing FILE_DELETED event to Kafka topic '{}' with key '{}': {}", TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage);
+            kafkaTemplate.send(TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage);
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing FILE_DELETED event to JSON for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error publishing FILE_DELETED event to Kafka for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 根据源文件的相对目录路径和原始文件名生成 Elasticsearch 文档 ID。
+     * 使用 SHA-256 哈希以确保唯一性和固定长度。
+     * @param sourceRelativeDirPath 源文件的相对目录路径 (例如 "docs/projectA/")
+     * @param sourceOriginalFilename 源文件的原始文件名 (例如 "report.docx.enc")
+     * @return SHA-256 哈希字符串作为 ES 文档 ID
+     */
+    private String generateElasticsearchDocumentId(String sourceRelativeDirPath, String sourceOriginalFilename) {
+        String normalizedDirPath = sourceRelativeDirPath;
+        if (normalizedDirPath == null) {
+            normalizedDirPath = ""; // 处理 null 情况
+        }
+        if (!normalizedDirPath.isEmpty() && !normalizedDirPath.endsWith("/")) {
+            normalizedDirPath += "/";
+        }
+        if (normalizedDirPath.equals("/")) { // 避免根目录变成 "//"
+            normalizedDirPath = "";
+        }
+
+        String uniqueFileIdentifier = normalizedDirPath + sourceOriginalFilename;
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(uniqueFileIdentifier.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * hash.length);
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            log.error("SHA-256 algorithm not found for generating Elasticsearch document ID. Falling back to plain identifier (NOT RECOMMENDED).", e);
+            return uniqueFileIdentifier.replaceAll("[^a-zA-Z0-9_\\-/.]", "_");
         }
     }
 }
