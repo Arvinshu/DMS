@@ -8,6 +8,7 @@
     <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
     <link rel="stylesheet" th:href="@{/css/project.css}">
     <link rel="stylesheet" th:href="@{/css/project_statistics.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
     <link rel="icon" th:href="@{/favicon.ico}" type="image/x-icon">
 
     <script th:inline="javascript">
@@ -56,7 +57,9 @@
                             <option value="已暂停">已暂停</option>
                             <option value="已取消">已取消</option>
                         </select>
-                        <button id="search-project-btn" class="btn">搜索</button>
+<!--                        暂时不用搜索按钮，因为页面会根据搜索框的数据变化自动搜索，但是这个控件也不要删除，以备后面有需求-->
+<!--                        <button id="search-project-btn" class="btn">搜索</button>-->
+                        <button id="clear-search-btn" class="btn btn-secondary">清空筛选</button>
                         <button id="add-project-btn" class="btn btn-primary">新增项目</button>
                     </div>
                     <div id="project-list-container" class="table-container overflow-x-auto">
@@ -66,22 +69,22 @@
                                 <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 40px;">序号
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     项目名称
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 10%;">创建时间
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 15%;">标签
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 10%;">业务类型
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 10%;">利润中心
                                 </th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     style="width: 10%;">当前阶段
                                 </th>
                                 <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -117,7 +120,7 @@
                                 </td>
                             </tr>
                             </thead>
-                            <tbody id="project-table-body" class="bg-white divide-y divide-gray-200">
+                            <tbody id="project-table-body" class="bg-white divide-y divide-gray-200 ">
                             </tbody>
                         </table>
                     </div>
@@ -161,15 +164,24 @@
                         <h3 class="text-xl font-semibold mb-3 text-indigo-700">部门整体情况</h3>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <div class="stat-card bg-blue-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-blue-700 font-semibold">活跃项目数(当前状态为“进行中”、“待办”、“已暂停”的项目数)</h4>
+                                <h4 class="text-sm text-blue-700 font-semibold">
+                                    <span>活跃项目数</span>
+                                    <div class="text-xs mt-1">(当前状态为“进行中”、“待办”、“已暂停”的项目数)</div>
+                                </h4>
                                 <p class="text-2xl font-bold" id="dept-active-projects">N/A</p>
                             </div>
                             <div class="stat-card bg-yellow-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-yellow-700 font-semibold">进行中任务(项目中状态为“进行中”的任务总和)</h4>
+                                <h4 class="text-sm text-yellow-700 font-semibold">
+                                    <span>进行中任务</span>
+                                    <div class="text-xs mt-1">(项目中状态为“进行中”的任务总和)</div>
+                                </h4>
                                 <p class="text-2xl font-bold" id="dept-inprogress-tasks">N/A</p>
                             </div>
                             <div class="stat-card bg-red-100 p-3 rounded shadow">
-                                <h4 class="text-sm text-red-700 font-semibold">总体逾期任务(已超过 dueDate 且状态非“已完成”的任务总和)</h4>
+                                <h4 class="text-sm text-red-700 font-semibold">
+                                    <span>总体逾期任务</span>
+                                    <div class="text-xs mt-1">(已超过 dueDate 且状态非“已完成”的任务总和)</div>
+                                </h4>
                                 <p class="text-2xl font-bold" id="dept-total-overdue-tasks">N/A</p>
                                 <a href="#overdue-tasks-table-anchor" class="text-xs text-red-600 hover:underline">查看详情</a>
                             </div>
@@ -275,6 +287,8 @@
 </div>
 
 <div th:replace="~{fragments/scripts :: commonScripts}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script th:src="@{/js/lib/flatpickr.min.js}"></script>
 <script th:src="@{/js/lib/zh.js}"></script>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-<!--    <link rel="stylesheet" th:href="@{/css/project.css}">-->
+    <!--    <link rel="stylesheet" th:href="@{/css/project.css}">-->
     <link rel="stylesheet" th:href="@{/css/filemanage.css}">
     <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
 </head>
@@ -15,21 +15,32 @@
     <div th:replace="~{fragments/header :: navbar}"></div>
 
     <div class="main-content-wrapper">
-
         <div id="filemanage-sidebar" class="sidebar list-group">
-            <a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">
-                <i class="fas fa-search"></i> 文档查询下载 </a>
-            <a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
-                <i class="fas fa-sync-alt"></i> 文档同步管理 </a>
+            <nav>
+                <ul class="sub-nav">
+                    <li><a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">
+                        <i class="fas fa-search"></i> 文档查询下载 </a></li>
+                    <li><a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
+                        <i class="fas fa-sync-alt"></i> 文档同步管理 </a></li>
+                </ul>
+            </nav>
         </div>
+
+        <!--        <div id="filemanage-sidebar" class="sidebar list-group">-->
+        <!--            <a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">-->
+        <!--                <i class="fas fa-search"></i> 文档查询下载 </a>-->
+        <!--            <a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">-->
+        <!--                <i class="fas fa-sync-alt"></i> 文档同步管理 </a>-->
+        <!--        </div>-->
 
         <div id="filemanage-content" class="main-content">
 
             <div id="query-download-section" class="content-section active-section">
-<!--                <h2 class="section-title">文档查询下载</h2>-->
+                <!--                <h2 class="section-title">文档查询下载</h2>-->
 
                 <div class="filter-controls mb-3">
-                    <input type="text" id="query-keyword" class="form-control d-inline-block w-auto" placeholder="输入文件名关键字...">
+                    <input type="text" id="query-keyword" class="form-control d-inline-block w-auto"
+                           placeholder="输入文件名关键字...">
                     <button id="query-btn" class="btn btn-primary ms-2">查询</button>
                 </div>
 
@@ -41,7 +52,8 @@
                             <th>相对路径</th>
                             <th>大小</th>
                             <th>最后修改日期</th>
-                            <th>操作</th> </tr>
+                            <th>操作</th>
+                        </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
@@ -62,7 +74,8 @@
                         <span class="me-3">本次成功: <strong id="sync-success-count">0</strong></span>
                         <span>本次失败: <strong id="sync-fail-count">0</strong></span>
                     </div>
-                    <div id="batch-delete-progress-info" class="mt-2 mb-3 p-2 border rounded" style="display: none;"> <h5>批量删除进度:</h5>
+                    <div id="batch-delete-progress-info" class="mt-2 mb-3 p-2 border rounded" style="display: none;">
+                        <h5>批量删除进度:</h5>
                         <span>总计待处理: <strong id="batch-delete-total">0</strong></span> |
                         <span>已处理: <strong id="batch-delete-processed">0</strong></span> |
                         <span>成功: <strong id="batch-delete-success" class="text-success">0</strong></span> |
@@ -72,8 +85,9 @@
 
                     <div class="sync-buttons">
                         <button id="start-sync-btn" class="btn btn-success me-2">开始同步</button>
-                        <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button> <button id="stop-sync-btn" class="btn btn-danger" disabled>停止</button>
-                        <button id="batch-clear-pending-btn" class="btn btn-info ms-2">批量清理当前页待删除</button>
+                        <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button>
+                        <button id="stop-sync-btn" class="btn btn-danger" disabled>停止</button>
+                        <button id="batch-clear-pending-btn" class="btn btn-info ms-2">清理本页待删除</button>
                     </div>
                 </div>
 
@@ -100,7 +114,10 @@
 
             </div>
 
-        </div> </div> </div> <div th:replace="~{fragments/scripts :: commonScripts}"></div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/scripts :: commonScripts}"></div>
 
 <script th:src="@{/js/filemanage/filemanage_api.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_ui.js}"></script>

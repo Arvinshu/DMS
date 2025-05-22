@@ -25,7 +25,7 @@
     background-color: #f8f9fa; /* Example background */
     padding: 1rem;
     border-right: 1px solid #dee2e6; /* Example border */
-    height: calc(100vh - 56px); /* Example: Adjust based on header height */
+    height: calc(100vh - 64px); /* Example: Adjust based on header height */
     overflow-y: auto; /* Allow sidebar scrolling if content exceeds height */
 }
 
@@ -33,16 +33,21 @@
     flex-grow: 1; /* Take remaining width */
     padding: 1.5rem; /* Padding for content area */
     overflow-y: auto; /* Allow content area scrolling if needed */
-    height: calc(100vh - 56px); /* Match sidebar height */
+    height: calc(100vh - 64px); /* Match sidebar height */
 }
 
 /* Sidebar link styling (assuming Bootstrap list-group is used) */
 #filemanage-sidebar .list-group-item {
     border-radius: 0.25rem; /* Example rounding */
-    margin-bottom: 0.5rem; /* Spacing between links */
+    /*margin-bottom: 0.5rem; !* Spacing between links *!*/
     border: none; /* Remove default list-group borders if needed */
     padding: 0.75rem 1rem;
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth transition */
+}
+
+/* 为 li 元素添加下边距 */
+#filemanage-sidebar .sub-nav li {
+    margin-bottom: 2rem; /* 或者你希望的任何值，如 0.8rem */
 }
 
 /* Active sidebar link style */
@@ -329,11 +334,18 @@
 }
 
 #pause-resume-sync-btn {
-    background: linear-gradient(45deg, #f59e0b, #d97706);
+    background: linear-gradient(45deg, #3b82f6, #2563eb); /* 现代、清晰的蓝色 (类似 Tailwind Blue 500-600) */
+    /* 备选蓝色方案 */
+    /* background: linear-gradient(45deg, #60a5fa, #3b82f6); */ /* 柔和一些的蓝色 (类似 Tailwind Blue 400-500) */
     color: white;
 }
 
 #stop-sync-btn {
+    background: linear-gradient(45deg, #f59e0b, #d97706); /* 温暖、警示的橙色 (类似 Tailwind Amber 500-600) */
+    color: white;
+}
+
+#batch-clear-pending-btn {
     background: linear-gradient(45deg, #ef4444, #dc2626);
     color: white;
 }

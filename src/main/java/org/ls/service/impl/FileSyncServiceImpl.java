@@ -20,9 +20,10 @@ import org.ls.dto.PendingFileSyncDto;
 import org.ls.entity.FileSyncMap;
 import org.ls.mapper.FileSyncMapMapper;
 import org.ls.service.FileSyncService;
-import org.ls.utils.DateUtils; // 假设 DateUtils 工具类存在
+import org.ls.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value; // +++ 引入 Value 注解 +++
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.task.TaskExecutor; // 引入 Spring 的 TaskExecutor
@@ -48,6 +49,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays; // +++ 引入 Arrays 用于处理配置列表 +++
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -88,6 +90,9 @@ public class FileSyncServiceImpl implements FileSyncService {
     private final boolean monitoringEnabled; // 是否启用实时文件监控
     private final boolean scanEnabled;       // 是否启用定时全量扫描
     private final String targetFilenameRemoveSuffix; // 目标文件名需要移除的后缀 (可选配置)
+    private final boolean kafkaEventsEnabled; // +++ 新增 Kafka 事件发布开关成员变量 +++
+    private final List<String> excludePatterns; // +++ 新增：文件排除模式列表 +++
+
 
     // --- 实时监控状态 ---
     private WatchService watchService; // Java NIO WatchService 实例
@@ -124,15 +129,20 @@ public class FileSyncServiceImpl implements FileSyncService {
                                @Qualifier("taskExecutor") TaskExecutor taskExecutor,
                                PlatformTransactionManager transactionManager,
                                ApplicationContext applicationContext,
-                               KafkaTemplate<String, String> kafkaTemplate, // +++ 注入 KafkaTemplate +++
-                               ObjectMapper objectMapper) { // +++ 注入 ObjectMapper +++
+                               // +++ 确保 KafkaTemplate 和 ObjectMapper 仍然被注入 +++
+                               // +++ 如果 KafkaTemplate 或 ObjectMapper 是可选的，可以使用 @Autowired(required = false) +++
+                               // +++ 但如果 kafkaEventsEnabled 为 true 时它们必须存在，则保持 required = true (默认) +++
+                               KafkaTemplate<String, String> kafkaTemplate,
+                               ObjectMapper objectMapper,
+                               // +++ 使用 @Value 注解注入文件排除模式 +++
+                               @Value("${file.sync.exclude-patterns:}") String excludePatternsRaw) {
         this.fileSyncMapMapper = fileSyncMapMapper;
         this.env = env;
         this.taskExecutor = taskExecutor;
         this.transactionManager = transactionManager;
         this.applicationContext = applicationContext;
-        this.kafkaTemplate = kafkaTemplate; // +++ 赋值 +++
-        this.objectMapper = objectMapper;   // +++ 赋值 +++
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
 
         // 读取并验证目录配置
         this.sourceDirectory = getRequiredDirectoryPath("file.sync.source-dir");
@@ -143,6 +153,17 @@ public class FileSyncServiceImpl implements FileSyncService {
         this.monitoringEnabled = Boolean.parseBoolean(env.getProperty("file.sync.enabled", "false"));
         this.scanEnabled = Boolean.parseBoolean(env.getProperty("file.sync.scan.enabled", "false"));
         this.targetFilenameRemoveSuffix = env.getProperty("file.sync.target-filename.remove-suffix");
+        this.kafkaEventsEnabled = Boolean.parseBoolean(env.getProperty("dms.kafka.events.enabled", "false"));
+
+        // +++ 处理文件排除模式配置 +++
+        if (StringUtils.hasText(excludePatternsRaw)) {
+            this.excludePatterns = Arrays.stream(excludePatternsRaw.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+        } else {
+            this.excludePatterns = Collections.emptyList();
+        }
 
         // 打印初始化信息
         log.info("FileSyncService 初始化完成。");
@@ -152,6 +173,8 @@ public class FileSyncServiceImpl implements FileSyncService {
         log.info("实时监控启用状态 (Monitoring Enabled): {}", this.monitoringEnabled);
         log.info("定时扫描启用状态 (Scheduled Scan Enabled): {}", this.scanEnabled);
         log.info("目标文件名移除后缀 (Target Filename Remove Suffix): '{}'", this.targetFilenameRemoveSuffix);
+        log.info("Kafka 事件发布启用状态 (Kafka Events Enabled): {}", this.kafkaEventsEnabled);
+        log.info("文件排除模式 (Exclude Patterns): {}", this.excludePatterns); // +++ 打印排除模式 +++
     }
 
     /**
@@ -221,6 +244,43 @@ public class FileSyncServiceImpl implements FileSyncService {
             log.error("访问目录 '{}' 时出现安全权限问题: {}", propertyKey, path, se);
             throw new IllegalStateException("访问目录 '" + propertyKey + "' 时权限不足。", se);
         }
+    }
+
+    /**
+     * +++ 新增方法：检查文件是否应根据配置的模式被排除 +++
+     *
+     * @param filePath 要检查的文件路径
+     * @return 如果文件应被排除则返回 true，否则返回 false
+     */
+    private boolean isFileExcluded(Path filePath) {
+        if (excludePatterns.isEmpty()) {
+            return false;
+        }
+        String filename = filePath.getFileName().toString();
+        for (String pattern : excludePatterns) {
+            if (pattern.startsWith("*") && pattern.endsWith("*")) { // 包含模式，例如 *temp*
+                if (filename.contains(pattern.substring(1, pattern.length() - 1))) {
+                    log.debug("文件 {} 因包含模式 '{}' 被排除。", filePath, pattern);
+                    return true;
+                }
+            } else if (pattern.startsWith("*")) { // 后缀匹配，例如 *.tmp
+                if (filename.endsWith(pattern.substring(1))) {
+                    log.debug("文件 {} 因后缀模式 '{}' 被排除。", filePath, pattern);
+                    return true;
+                }
+            } else if (pattern.endsWith("*")) { // 前缀匹配，例如 ~$*
+                if (filename.startsWith(pattern.substring(0, pattern.length() - 1))) {
+                    log.debug("文件 {} 因前缀模式 '{}' 被排除。", filePath, pattern);
+                    return true;
+                }
+            } else { // 完全匹配
+                if (filename.equals(pattern)) {
+                    log.debug("文件 {} 因完全匹配模式 '{}' 被排除。", filePath, pattern);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 
@@ -405,6 +465,13 @@ public class FileSyncServiceImpl implements FileSyncService {
 
                 log.debug("检测到事件: {}，路径: {}", kind.name(), fullPath);
 
+                // +++ 在处理事件前，检查文件是否应被排除 +++
+                if (isFileExcluded(fullPath)) {
+                    log.debug("文件 {} 被排除，跳过处理监控事件。", fullPath);
+                    continue; // 跳过此事件
+                }
+
+
                 try {
                     FileSyncService self = applicationContext.getBean(FileSyncService.class);
 
@@ -416,8 +483,6 @@ public class FileSyncServiceImpl implements FileSyncService {
                             registerDirectoryTree(fullPath);
                         } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
                             log.info("检测到目录删除事件（或 key 失效前兆）: {}", fullPath);
-                            // +++ 目录删除事件也可能触发目标端空目录的清理检查 (如果需要实时性更高)
-                            // +++ 但通常由 performFullScan 处理更全面, 这里暂不直接处理目标端删除
                         }
                     } else {
                         // 处理文件事件
@@ -445,9 +510,17 @@ public class FileSyncServiceImpl implements FileSyncService {
 
 
     // --- 事件处理逻辑 (由监控线程或扫描任务调用, 带事务) ---
+    // 监控 sourceFilePath 的新增、修改事件
+    // 对监控到的数据迁移到tmp目录
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void handleFileCreateOrModify(Path sourceFilePath) {
+        // +++ 方法开头增加排除检查 +++
+        if (isFileExcluded(sourceFilePath)) {
+            log.info("文件 {} 在 handleFileCreateOrModify 中被排除，跳过处理。", sourceFilePath);
+            return;
+        }
+
         if (!Files.isRegularFile(sourceFilePath, LinkOption.NOFOLLOW_LINKS)) {
             log.debug("跳过非普通文件事件: {}", sourceFilePath);
             return;
@@ -513,8 +586,16 @@ public class FileSyncServiceImpl implements FileSyncService {
         }
     }
 
+    // --- 事件处理逻辑 (由监控线程或扫描任务调用, 带事务) ---
+    // 监控 sourceFilePath 的删除事件
+    // 对监控到的数据从tmp目录删除
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void handleFileDelete(Path sourceFilePath) {
+        // +++ 方法开头增加排除检查 (删除事件通常也需要处理，除非有特定逻辑不删除记录) +++
+        // 通常，即使是临时文件，如果被监控到删除，也应该更新其在数据库中的状态或删除记录。
+        // 此处暂时不添加 isFileExcluded，因为删除逻辑可能与创建/修改不同。
+        // 如果需要对删除也应用排除规则，可以在这里添加 if (isFileExcluded(sourceFilePath)) { ... return; }
+
         log.info("处理删除事件，可能的文件路径: {}", sourceFilePath);
         try {
             Path relativePath = sourceDirectory.relativize(sourceFilePath.getParent());
@@ -541,6 +622,9 @@ public class FileSyncServiceImpl implements FileSyncService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateStatusOnError(Path sourceFilePath, String errorStatus, LocalDateTime sourceLastModifiedTimeTruncated) {
+        // +++ 如果源文件本身是被排除的，则可能不需要更新错误状态 +++
+        // if (isFileExcluded(sourceFilePath)) { return; } // 可选：如果排除的文件不应记录错误
+
         try {
             Path relativePath = sourceDirectory.relativize(sourceFilePath.getParent());
             String relativeDirPath = formatRelativePath(relativePath);
@@ -616,12 +700,12 @@ public class FileSyncServiceImpl implements FileSyncService {
         log.info("开始执行定时全量扫描...");
         long startTime = System.currentTimeMillis();
 
-        Map<String, FileSystemInfo> fileSystemState = scanSourceDirectory();
+        Map<String, FileSystemInfo> fileSystemState = scanSourceDirectory(); // scanSourceDirectory 内部已加入过滤
         if (fileSystemState == null) {
             log.error("全量扫描失败：无法扫描源目录。");
             return;
         }
-        log.info("全量扫描：扫描到源目录中 {} 个文件。", fileSystemState.size());
+        log.info("全量扫描：扫描到源目录中 {} 个（未被排除的）文件。", fileSystemState.size());
 
         Map<String, FileSyncMap> dbState = getDatabaseState();
         log.info("全量扫描：从数据库获取到 {} 条相关记录。", dbState.size());
@@ -660,6 +744,20 @@ public class FileSyncServiceImpl implements FileSyncService {
         }
 
         for (FileSyncMap dbRecord : dbState.values()) {
+            // +++ 检查DB中记录对应的文件是否现在被排除了 +++
+            // 构造源文件路径以进行排除检查
+            Path sourceFileForDbRecord = sourceDirectory.resolve(dbRecord.getRelativeDirPath()).resolve(dbRecord.getOriginalFilename());
+            if (isFileExcluded(sourceFileForDbRecord)) {
+                log.info("全量扫描：数据库记录 ID {} ({}{}) 对应的源文件现在被排除规则过滤，标记为待删除（如果适用）或直接删除记录。",
+                        dbRecord.getId(), dbRecord.getRelativeDirPath(), dbRecord.getOriginalFilename());
+                // 根据业务逻辑，这里可以选择直接删除记录，或者也标记为 PENDING_DELETION
+                // 为简单起见，如果文件被排除了，也视为源文件“消失”的一种形式
+                if (!STATUS_PENDING_DELETION.equals(dbRecord.getStatus())) {
+                    idsToMarkForDeletion.add(dbRecord.getId());
+                }
+                continue; // 跳过后续的正常删除标记
+            }
+
             if (!STATUS_PENDING_DELETION.equals(dbRecord.getStatus())) {
                 log.debug("全量扫描发现数据库记录对应的源文件已删除: ID={}, Path={}{}",
                         dbRecord.getId(), dbRecord.getRelativeDirPath(), dbRecord.getOriginalFilename());
@@ -673,6 +771,11 @@ public class FileSyncServiceImpl implements FileSyncService {
 
         for (Path filePath : filesToProcess) {
             try {
+                // handleFileCreateOrModify 内部已经有 isFileExcluded 检查，但这里再次检查以防万一或逻辑变更
+                if (isFileExcluded(filePath)) {
+                    log.debug("全量扫描：文件 {} 在处理前被再次确认为排除项，跳过。", filePath);
+                    continue;
+                }
                 ((FileSyncServiceImpl) self).handleFileCreateOrModify(filePath);
             } catch (Exception e) {
                 log.error("全量扫描处理文件 {} 时出错。", filePath, e);
@@ -742,22 +845,31 @@ public class FileSyncServiceImpl implements FileSyncService {
     private Map<String, FileSystemInfo> scanSourceDirectory() {
         Map<String, FileSystemInfo> fileSystemState = new HashMap<>();
         try (Stream<Path> stream = Files.walk(sourceDirectory)) {
-            stream.filter(Files::isRegularFile).forEach(path -> {
-                try {
-                    Path relativePath = sourceDirectory.relativize(path.getParent());
-                    String relativeDirPath = formatRelativePath(relativePath);
-                    String originalFilename = path.getFileName().toString();
-                    String key = relativeDirPath + "||" + originalFilename;
+            stream.filter(Files::isRegularFile)
+                    // +++ 在此处加入过滤逻辑 +++
+                    .filter(path -> {
+                        if (isFileExcluded(path)) {
+                            log.debug("全量扫描：文件 {} 被排除，不加入扫描结果。", path);
+                            return false; // 不包含此文件
+                        }
+                        return true; // 包含此文件
+                    })
+                    .forEach(path -> {
+                        try {
+                            Path relativePath = sourceDirectory.relativize(path.getParent());
+                            String relativeDirPath = formatRelativePath(relativePath);
+                            String originalFilename = path.getFileName().toString();
+                            String key = relativeDirPath + "||" + originalFilename;
 
-                    Instant originalInstant = Files.getLastModifiedTime(path).toInstant();
-                    Instant truncatedInstant = originalInstant.truncatedTo(ChronoUnit.SECONDS);
-                    LocalDateTime lastModifiedTruncatedToSecond = LocalDateTime.ofInstant(truncatedInstant, ZoneId.systemDefault());
+                            Instant originalInstant = Files.getLastModifiedTime(path).toInstant();
+                            Instant truncatedInstant = originalInstant.truncatedTo(ChronoUnit.SECONDS);
+                            LocalDateTime lastModifiedTruncatedToSecond = LocalDateTime.ofInstant(truncatedInstant, ZoneId.systemDefault());
 
-                    fileSystemState.put(key, new FileSystemInfo(path, lastModifiedTruncatedToSecond));
-                } catch (IOException | SecurityException | InvalidPathException e) {
-                    log.error("扫描文件 {} 时读取属性或计算路径出错，跳过该文件。", path, e);
-                }
-            });
+                            fileSystemState.put(key, new FileSystemInfo(path, lastModifiedTruncatedToSecond));
+                        } catch (IOException | SecurityException | InvalidPathException e) {
+                            log.error("扫描文件 {} 时读取属性或计算路径出错，跳过该文件。", path, e);
+                        }
+                    });
             return fileSystemState;
         } catch (IOException | SecurityException e) {
             log.error("扫描源目录 {} 时出错。", sourceDirectory, e);
@@ -774,7 +886,7 @@ public class FileSyncServiceImpl implements FileSyncService {
                         Function.identity(),
                         (existing, replacement) -> {
                             log.warn("数据库中发现重复的路径和文件名组合: {}{}", existing.getRelativeDirPath(), existing.getOriginalFilename());
-                            return existing;
+                            return existing; // 保留已存在的记录
                         }
                 ));
     }
@@ -811,6 +923,20 @@ public class FileSyncServiceImpl implements FileSyncService {
         List<FileSyncMap> allPendingMaps = new ArrayList<>();
         allPendingMaps.addAll(pendingSyncMaps);
         allPendingMaps.addAll(pendingDeletionMaps);
+
+        // +++ 过滤掉那些源文件实际已被排除的 PENDING 记录 +++
+        // 这可以防止UI上显示那些因为新增了排除规则而不再应该同步的文件
+        allPendingMaps.removeIf(record -> {
+            if (STATUS_PENDING.equals(record.getStatus()) || STATUS_ERROR_COPYING.equals(record.getStatus()) || STATUS_ERROR_SYNCING.equals(record.getStatus())) {
+                Path sourceFileToCheck = sourceDirectory.resolve(record.getRelativeDirPath()).resolve(record.getOriginalFilename());
+                if (isFileExcluded(sourceFileToCheck)) {
+                    log.debug("待处理列表：记录 ID {} ({}{}) 因源文件被排除规则过滤而不显示。", record.getId(), record.getRelativeDirPath(), record.getOriginalFilename());
+                    return true; // 从列表中移除
+                }
+            }
+            return false;
+        });
+
 
         allPendingMaps.sort(Comparator.comparing(FileSyncMap::getLastUpdated, Comparator.nullsLast(Comparator.reverseOrder())));
 
@@ -872,6 +998,10 @@ public class FileSyncServiceImpl implements FileSyncService {
         long errorSyncingCount = fileSyncMapMapper.countByStatus(STATUS_ERROR_SYNCING);
         long syncingCount = fileSyncMapMapper.countByStatus(STATUS_SYNCING);
         long pendingDeletionCount = fileSyncMapMapper.countByStatus(STATUS_PENDING_DELETION);
+
+        // 考虑从 pendingCount 中排除那些实际已被新规则排除的文件
+        // (这会使状态更准确，但可能需要更复杂的查询或后处理)
+        // 为简单起见，暂时不修改这里的计数逻辑，但这是一个潜在的优化点。
 
         return new FileSyncStatusDto(
                 monitoringActive.get(),
@@ -996,6 +1126,20 @@ public class FileSyncServiceImpl implements FileSyncService {
 
                 log.info("Processing batch of {} files...", batchToProcess.size());
                 for (FileSyncMap record : batchToProcess) {
+                    // +++ 在处理单个记录前，再次检查其源文件是否被排除 +++
+                    // 这可以处理在批处理锁定后，但在单个文件处理前，排除规则发生变化的情况（虽然罕见）
+                    // 或者，如果 selectAndProcessBatch 没有完全过滤掉所有应排除的文件。
+                    Path sourceFileForRecord = sourceDirectory.resolve(record.getRelativeDirPath()).resolve(record.getOriginalFilename());
+                    if (isFileExcluded(sourceFileForRecord)) {
+                        log.warn("记录 ID {} ({}{}) 在手动同步批处理中被发现其源文件应被排除。跳过此记录并可能将其标记为错误或待删除。",
+                                record.getId(), record.getRelativeDirPath(), record.getOriginalFilename());
+                        // 可以在这里更新记录状态为某种“已排除”状态或错误状态，然后 continue
+                        // 为简单起见，我们暂时跳过，但理想情况下应有状态更新
+                        failedInCurrentRun.incrementAndGet(); // 算作失败，因为它不应被处理
+                        updateFileSyncStatusInNewTransaction(record.getId(), STATUS_ERROR_SYNCING, record, null, -1, -1); // 标记为错误示例
+                        continue;
+                    }
+
                     if (cancelFlag.get()) {
                         log.info("Cancel flag detected during batch processing. Aborting current batch.");
                         break;
@@ -1028,6 +1172,7 @@ public class FileSyncServiceImpl implements FileSyncService {
 
     /**
      * Selects a batch of pending files, locks them by updating status to 'syncing'.
+     * +++ 此方法现在也应考虑排除规则，不选择那些源文件已被排除的记录。 +++
      */
     private List<FileSyncMap> selectAndProcessBatch() {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
@@ -1035,25 +1180,57 @@ public class FileSyncServiceImpl implements FileSyncService {
         TransactionStatus status = transactionManager.getTransaction(def);
         List<FileSyncMap> batch = Collections.emptyList();
         try {
-            batch = fileSyncMapMapper.selectAndLockPending(SYNC_BATCH_SIZE);
-            if (!CollectionUtils.isEmpty(batch)) {
-                List<Long> idsToUpdate = batch.stream().map(FileSyncMap::getId).collect(Collectors.toList());
-                int updatedRows = fileSyncMapMapper.batchUpdateStatus(idsToUpdate, STATUS_SYNCING);
-                if (updatedRows != batch.size()) {
-                    log.error("Mismatch between locked rows ({}) and updated rows ({}). Rolling back batch selection.", batch.size(), updatedRows);
+            // 获取一批 PENDING 状态的记录
+            List<FileSyncMap> candidates = fileSyncMapMapper.selectAndLockPending(SYNC_BATCH_SIZE * 2); // 获取稍多一些作为候选
+            if (CollectionUtils.isEmpty(candidates)) {
+                transactionManager.commit(status); // 没有候选，直接提交并返回空列表
+                return Collections.emptyList();
+            }
+
+            List<FileSyncMap> filteredBatch = new ArrayList<>();
+            List<Long> idsToUpdateToSyncing = new ArrayList<>();
+
+            for (FileSyncMap record : candidates) {
+                Path sourceFileForRecord = sourceDirectory.resolve(record.getRelativeDirPath()).resolve(record.getOriginalFilename());
+                if (isFileExcluded(sourceFileForRecord)) {
+                    log.warn("选择批处理：记录 ID {} ({}{}) 的源文件被排除规则过滤，将不会被处理。考虑将其状态更新为错误或已排除。",
+                            record.getId(), record.getRelativeDirPath(), record.getOriginalFilename());
+                    // 可选：在这里更新这些记录的状态为“已排除”或某种错误状态
+                    // fileSyncMapMapper.updateStatusById(record.getId(), "excluded_by_rule"); // 示例
+                    continue; // 跳过此记录
+                }
+                filteredBatch.add(record);
+                idsToUpdateToSyncing.add(record.getId());
+                if (filteredBatch.size() >= SYNC_BATCH_SIZE) {
+                    break; // 已达到批处理大小
+                }
+            }
+
+
+            if (!CollectionUtils.isEmpty(idsToUpdateToSyncing)) {
+                int updatedRows = fileSyncMapMapper.batchUpdateStatus(idsToUpdateToSyncing, STATUS_SYNCING);
+                if (updatedRows != idsToUpdateToSyncing.size()) {
+                    log.error("批处理锁定与更新不匹配：期望更新 {} 条，实际更新 {} 条。正在回滚批处理选择。", idsToUpdateToSyncing.size(), updatedRows);
                     transactionManager.rollback(status);
                     return Collections.emptyList();
                 }
-                log.debug("Locked and updated status to 'syncing' for {} records.", updatedRows);
+                log.debug("已锁定并将 {} 条记录的状态更新为 'syncing'。", updatedRows);
+                batch = filteredBatch; // 使用过滤后的、且已更新状态的记录
+            } else {
+                log.debug("没有符合条件（未被排除）的记录可供处理。");
+                batch = Collections.emptyList();
             }
+
             transactionManager.commit(status);
             return batch;
         } catch (Exception e) {
-            log.error("Error selecting and locking batch. Rolling back.", e);
+            log.error("选择并锁定批处理时出错。正在回滚。", e);
             try {
-                transactionManager.rollback(status);
+                if (!status.isCompleted()){
+                    transactionManager.rollback(status);
+                }
             } catch (Exception rbEx) {
-                log.error("Error during rollback of batch selection.", rbEx);
+                log.error("回滚批处理选择时出错。", rbEx);
             }
             return Collections.emptyList();
         }
@@ -1076,18 +1253,18 @@ public class FileSyncServiceImpl implements FileSyncService {
 
         try {
             if (!Files.exists(tempFilePath)) {
-                log.error("Temporary file {} for record ID {} not found. Setting status to error.", tempFilePath, record.getId());
+                log.error("临时文件 {} (记录 ID {}) 未找到。将状态设置为错误。", tempFilePath, record.getId());
             } else {
                 String targetFilename = generateTargetFilename(record.getOriginalFilename());
                 Path targetPath = targetDirectory.resolve(record.getRelativeDirPath()).resolve(targetFilename).normalize();
                 targetPathGlobal = targetPath;
 
                 if (!targetPath.startsWith(targetDirectory)) {
-                    log.error("Target path traversal attempt for record ID {}: {}", record.getId(), targetPath);
+                    log.error("目标路径 {} (记录 ID {}) 存在目录遍历风险。", targetPath, record.getId());
                 } else {
                     Files.createDirectories(targetPath.getParent());
                     Files.move(tempFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                    log.info("Successfully moved temp file {} to target {}", tempFilePath, targetPath);
+                    log.info("成功将临时文件 {} 移动到目标位置 {}", tempFilePath, targetPath);
                     finalStatus = STATUS_SYNCED;
                     processedInCurrentRun.incrementAndGet();
 
@@ -1097,10 +1274,10 @@ public class FileSyncServiceImpl implements FileSyncService {
                 }
             }
         } catch (IOException e) {
-            log.error("IOException during file move for record ID {}. Temp: {}, Target attempt: {}. Setting status to error.",
-                    record.getId(), tempFilePath, record.getRelativeDirPath() + generateTargetFilename(record.getOriginalFilename()), e);
+            log.error("处理文件记录 ID {} 时发生 IO 错误。临时文件: {}, 目标尝试路径: {}{}. 将状态设置为错误。",
+                    record.getId(), tempFilePath, record.getRelativeDirPath(), generateTargetFilename(record.getOriginalFilename()), e);
         } catch (Exception e) {
-            log.error("Unexpected exception during file processing for record ID {}. Setting status to error.", record.getId(), e);
+            log.error("处理文件记录 ID {} 时发生意外错误。将状态设置为错误。", record.getId(), e);
         }
 
         if (STATUS_ERROR_SYNCING.equals(finalStatus)) {
@@ -1123,23 +1300,24 @@ public class FileSyncServiceImpl implements FileSyncService {
             int updated = fileSyncMapMapper.updateStatusById(id, status);
             transactionManager.commit(txStatus); // Commit DB transaction first
             if (updated > 0) {
-                log.debug("Updated status to '{}' for record ID {}", status, id);
-                if (STATUS_SYNCED.equals(status) && recordForEvent != null && targetFullPathForEvent != null) {
-                    // +++ 调用 Kafka 事件发布 +++
+                log.debug("已将记录 ID {} 的状态更新为 '{}'。", status, id);
+                // +++ 检查 Kafka 事件发布开关 +++
+                if (this.kafkaEventsEnabled && STATUS_SYNCED.equals(status) && recordForEvent != null && targetFullPathForEvent != null) {
                     publishFileUpsertEvent(recordForEvent, targetFullPathForEvent, targetSizeForEvent, targetModTimeForEvent);
-                    log.info("已成功在消息队列发布'{}'新增事件。", id);
+                } else if (!this.kafkaEventsEnabled && STATUS_SYNCED.equals(status)) {
+                    log.info("Kafka 事件发布已禁用。跳过记录 ID {} 的 upsert 事件。", id);
                 }
             } else {
-                log.warn("Could not update status to '{}' for record ID {} (record might have been deleted concurrently?)", status, id);
+                log.warn("未能将记录 ID {} 的状态更新为 '{}' (记录可能已被并发删除？)", status, id);
             }
         } catch (Exception e) {
-            log.error("Failed to update status to '{}' for record ID {}. Rolling back status update.", status, id, e);
+            log.error("未能将记录 ID {} 的状态更新为 '{}'。正在回滚状态更新。", status, id, e);
             try {
                 if (!txStatus.isCompleted()) { // 确保事务未完成才回滚
                     transactionManager.rollback(txStatus);
                 }
             } catch (Exception rbEx) {
-                log.error("Error during rollback of status update for record ID {}.", id, rbEx);
+                log.error("回滚记录 ID {} 的状态更新时出错。", id, rbEx);
             }
             // 如果DB提交失败，就不应该发送Kafka消息
         }
@@ -1200,6 +1378,7 @@ public class FileSyncServiceImpl implements FileSyncService {
         FileSyncMap record = null;
 
         try {
+            // 在事务内查询最新的记录状态
             record = fileSyncMapMapper.selectByStatus(STATUS_PENDING_DELETION)
                     .stream()
                     .filter(r -> r.getId().equals(id))
@@ -1248,9 +1427,12 @@ public class FileSyncServiceImpl implements FileSyncService {
             transactionManager.commit(txStatus); // 提交数据库事务
             log.info("已成功确认并删除与记录 ID {} 相关的文件和数据。", id);
 
-            // +++ 在数据库事务成功提交后，发布删除事件 +++
-            publishFileDeleteEvent(record);
-            log.info("已成功在消息队列发布 {} 删除事件。", id);
+            // +++ 检查 Kafka 事件发布开关 +++
+            if (this.kafkaEventsEnabled) {
+                publishFileDeleteEvent(record);
+            } else {
+                log.info("Kafka 事件发布已禁用。跳过记录 ID {} 的 delete 事件。", id);
+            }
             return true;
 
         } catch (Exception e) {
@@ -1268,6 +1450,15 @@ public class FileSyncServiceImpl implements FileSyncService {
 
     // +++ 新增 Kafka 事件发布辅助方法 (已在Canvas中定义，这里是实际实现) +++
     private void publishFileUpsertEvent(FileSyncMap fileRecord, Path targetFullPath, long targetSize, long targetModTimeEpochSeconds) {
+        if (!this.kafkaEventsEnabled) {
+            log.debug("Kafka upsert 事件发布已全局禁用。跳过 FileSyncMap ID: {} 的事件。", fileRecord.getId());
+            return;
+        }
+        if (this.kafkaTemplate == null || this.objectMapper == null) {
+            log.error("KafkaTemplate 或 ObjectMapper 未注入，但 Kafka 事件已启用。无法为 FileSyncMap ID: {} 发布 upsert 事件。", fileRecord.getId());
+            return;
+        }
+
         String eventId = UUID.randomUUID().toString();
         String esDocumentId = generateElasticsearchDocumentId(fileRecord.getRelativeDirPath(), fileRecord.getOriginalFilename());
 
@@ -1277,28 +1468,47 @@ public class FileSyncServiceImpl implements FileSyncService {
         messagePayload.put("eventTimestamp", Instant.now().toString());
         messagePayload.put("fileSyncMapId", fileRecord.getId());
         messagePayload.put("sourceRelativePath", fileRecord.getRelativeDirPath());
-        messagePayload.put("sourceFilename", fileRecord.getOriginalFilename()); // 这是源（加密）文件名
+        messagePayload.put("sourceFilename", fileRecord.getOriginalFilename());
 
         Path targetRelativeDir = targetDirectory.relativize(targetFullPath.getParent());
         messagePayload.put("targetRelativePath", formatRelativePath(targetRelativeDir));
-        messagePayload.put("targetFilename", targetFullPath.getFileName().toString()); // 这是目标（解密后）文件名
+        messagePayload.put("targetFilename", targetFullPath.getFileName().toString());
         messagePayload.put("targetFileSizeInBytes", targetSize);
         messagePayload.put("targetFileLastModifiedEpochSeconds", targetModTimeEpochSeconds);
         messagePayload.put("elasticsearchDocumentId", esDocumentId);
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(messagePayload);
-            log.info("Publishing FILE_UPSERTED event to Kafka topic '{}' with key '{}': {}", TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage);
-            kafkaTemplate.send(TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage); // 使用 esDocumentId 作为 Kafka key
+            log.info("正在向 Kafka 主题 '{}' 发布 FILE_UPSERTED 事件，键: '{}': {}", TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage);
+            kafkaTemplate.send(TOPIC_FILE_UPSERT_EVENTS, esDocumentId, jsonMessage)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("成功发送 esDocumentId: {} 的 FILE_UPSERTED 事件到主题 {}，偏移量: {}",
+                                    esDocumentId, result.getRecordMetadata().topic(), result.getRecordMetadata().offset());
+                        } else {
+                            log.error("发送 esDocumentId: {} 的 FILE_UPSERTED 事件到主题 {} 失败: {}",
+                                    esDocumentId, TOPIC_FILE_UPSERT_EVENTS, ex.getMessage(), ex);
+                        }
+                    });
         } catch (JsonProcessingException e) {
-            log.error("Error serializing FILE_UPSERTED event to JSON for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
-        } catch (Exception e) { // KafkaException 等
-            log.error("Error publishing FILE_UPSERTED event to Kafka for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
-            // 考虑更复杂的错误处理，如重试或发送到死信队列，但对于初版，记录日志是基础
+            log.error("序列化记录 ID {} 的 FILE_UPSERTED 事件为 JSON 时出错: {}", fileRecord.getId(), e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("准备或发起向 Kafka 发布记录 ID {} 的 FILE_UPSERTED 事件时出错: {}", fileRecord.getId(), e.getMessage(), e);
         }
     }
 
     private void publishFileDeleteEvent(FileSyncMap fileRecord) {
+        // +++ 增加开关判断，如果未启用则直接返回 +++
+        if (!this.kafkaEventsEnabled) {
+            log.debug("Kafka delete 事件发布已全局禁用。跳过 FileSyncMap ID: {} 的事件。", fileRecord.getId());
+            return;
+        }
+        // +++ 确保 KafkaTemplate 已注入 +++
+        if (this.kafkaTemplate == null || this.objectMapper == null) {
+            log.error("KafkaTemplate 或 ObjectMapper 未注入，但 Kafka 事件已启用。无法为 FileSyncMap ID: {} 发布 delete 事件。", fileRecord.getId());
+            return;
+        }
+
         String eventId = UUID.randomUUID().toString();
         String esDocumentId = generateElasticsearchDocumentId(fileRecord.getRelativeDirPath(), fileRecord.getOriginalFilename());
 
@@ -1312,12 +1522,21 @@ public class FileSyncServiceImpl implements FileSyncService {
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(messagePayload);
-            log.info("Publishing FILE_DELETED event to Kafka topic '{}' with key '{}': {}", TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage);
-            kafkaTemplate.send(TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage);
+            log.info("正在向 Kafka 主题 '{}' 发布 FILE_DELETED 事件，键: '{}': {}", TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage);
+            kafkaTemplate.send(TOPIC_FILE_DELETE_EVENTS, esDocumentId, jsonMessage)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("成功发送 esDocumentId: {} 的 FILE_DELETED 事件到主题 {}，偏移量: {}",
+                                    esDocumentId, result.getRecordMetadata().topic(), result.getRecordMetadata().offset());
+                        } else {
+                            log.error("发送 esDocumentId: {} 的 FILE_DELETED 事件到主题 {} 失败: {}",
+                                    esDocumentId, TOPIC_FILE_DELETE_EVENTS, ex.getMessage(), ex);
+                        }
+                    });
         } catch (JsonProcessingException e) {
-            log.error("Error serializing FILE_DELETED event to JSON for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+            log.error("序列化记录 ID {} 的 FILE_DELETED 事件为 JSON 时出错: {}", fileRecord.getId(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Error publishing FILE_DELETED event to Kafka for record ID {}: {}", fileRecord.getId(), e.getMessage(), e);
+            log.error("准备或发起向 Kafka 发布记录 ID {} 的 FILE_DELETED 事件时出错: {}", fileRecord.getId(), e.getMessage(), e);
         }
     }
 
@@ -1354,7 +1573,7 @@ public class FileSyncServiceImpl implements FileSyncService {
             }
             return hexString.toString();
         } catch (java.security.NoSuchAlgorithmException e) {
-            log.error("SHA-256 algorithm not found for generating Elasticsearch document ID. Falling back to plain identifier (NOT RECOMMENDED).", e);
+            log.error("未找到 SHA-256 算法用于生成 Elasticsearch 文档 ID。将回退到普通标识符（不推荐）。", e);
             return uniqueFileIdentifier.replaceAll("[^a-zA-Z0-9_\\-/.]", "_");
         }
     }
