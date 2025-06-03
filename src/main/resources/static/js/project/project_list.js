@@ -166,7 +166,7 @@ const ProjectListModule = (() => {
             <td class="px-3 py-2 whitespace-nowrap" data-field="createdAt">${AppUtils.formatDateIfPresent(project.createdAt)}</td>
             <td class="px-3 py-2" data-field="tags">${tagsHtml}</td>
             <td class="px-3 py-2 whitespace-nowrap" data-field="businessTypeName">${AppUtils.escapeHTML(project.businessTypeName ?? '-')}</td>
-            <td class="px-3 py-2 whitespace-nowrap" data-field="profitCenterZone">${AppUtils.escapeHTML(AppUtils.getShortName(project.profitCenterZone,'基础业务-') ?? '-')}</td>
+            <td class="px-3 py-2 whitespace-nowrap" data-field="profitCenterZone">${AppUtils.escapeHTML(AppUtils.getShortName(project.profitCenterZone,'大区与网省中心-') ?? '-')}</td>
             <td class="px-3 py-2 whitespace-nowrap" data-field="currentStageName">${AppUtils.escapeHTML(project.currentStageName ?? '-')}</td>
             <td class="px-3 py-2 text-center" data-field="projectStatus">${statusHtml}</td>
             <td class="px-3 py-2 text-center" data-field="progress">${progressHtml}</td>

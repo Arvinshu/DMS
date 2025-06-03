@@ -1304,6 +1304,7 @@ public class FileSyncServiceImpl implements FileSyncService {
                 // +++ 检查 Kafka 事件发布开关 +++
                 if (this.kafkaEventsEnabled && STATUS_SYNCED.equals(status) && recordForEvent != null && targetFullPathForEvent != null) {
                     publishFileUpsertEvent(recordForEvent, targetFullPathForEvent, targetSizeForEvent, targetModTimeForEvent);
+                    log.info(" ID为 {} 的新增事件已成功发送至kafka队列。", id);
                 } else if (!this.kafkaEventsEnabled && STATUS_SYNCED.equals(status)) {
                     log.info("Kafka 事件发布已禁用。跳过记录 ID {} 的 upsert 事件。", id);
                 }

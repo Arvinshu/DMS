@@ -384,12 +384,22 @@ const ProjectCrudModule = (() => {
     }
 
     // 从编辑行（包括新增行）获取数据
+    // 这个函数是组装项目信息，并发送至后端进行写入数据库操作。
     function getEditableRowData(row) {
         const data = {};
         data.projectName = row.querySelector('input[name="projectName"]')?.value.trim();
         data.createdAt = row.querySelector('input[name="createdAt"]')?.value; // 获取日期字符串
         data.businessTypeName = row.querySelector('select[name="businessTypeName"]')?.value;
         data.profitCenterZone = row.querySelector('select[name="profitCenterZone"]')?.value;
+
+        // 修改后（获取选中项的text）
+        // const businessTypeSelect = row.querySelector('select[name="businessTypeName"]');
+        // data.businessTypeName = businessTypeSelect?.selectedOptions[0]?.textContent.trim() || '';
+
+        //写入t_project表中的值为自定义项目利润中心。但是这样做会违反外键关联的t_profit_center唯一约束
+        // const profitCenterSelect = row.querySelector('select[name="profitCenterZone"]');
+        // data.profitCenterZone = profitCenterSelect?.selectedOptions[0]?.textContent.trim() || '';
+
 
         const tagSelect = row.querySelector('select[name="tagIds"]');
         // 如果是 Choices.js 实例，需要从实例获取值
