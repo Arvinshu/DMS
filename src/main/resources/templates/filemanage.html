@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-    <!--    <link rel="stylesheet" th:href="@{/css/project.css}">-->
+    <link rel="stylesheet" th:href="@{/css/project.css}">
     <link rel="stylesheet" th:href="@{/css/filemanage.css}">
+    <!-- 新增：引入全文搜索专属CSS -->
+    <link rel="stylesheet" th:href="@{/css/fulltext_search.css}">
     <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
 <div class="app-container">
@@ -18,32 +21,29 @@
         <div id="filemanage-sidebar" class="sidebar list-group">
             <nav>
                 <ul class="sub-nav">
-                    <li><a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">
+                    <!-- 添加 active 类到全文检索 -->
+                    <li><a href="#fulltext-search-section" class="list-group-item list-group-item-action active" data-section="fulltext-search-section">
+                        <i class="fas fa-search-plus"></i> 全文内容检索 </a></li>
+                    <!-- 移除 active 类 -->
+                    <li><a href="#query-download-section" class="list-group-item list-group-item-action" data-section="query-download-section">
                         <i class="fas fa-search"></i> 文档查询下载 </a></li>
                     <li><a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
                         <i class="fas fa-sync-alt"></i> 文档同步管理 </a></li>
+
                 </ul>
             </nav>
         </div>
 
-        <!--        <div id="filemanage-sidebar" class="sidebar list-group">-->
-        <!--            <a href="#query-download-section" class="list-group-item list-group-item-action active" data-section="query-download-section">-->
-        <!--                <i class="fas fa-search"></i> 文档查询下载 </a>-->
-        <!--            <a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">-->
-        <!--                <i class="fas fa-sync-alt"></i> 文档同步管理 </a>-->
-        <!--        </div>-->
-
         <div id="filemanage-content" class="main-content">
 
-            <div id="query-download-section" class="content-section active-section">
-                <!--                <h2 class="section-title">文档查询下载</h2>-->
-
+            <!-- 移除 active-section 类 -->
+            <div id="query-download-section" class="content-section">
+                <!-- 文档查询下载区域内容 (保持不变) -->
                 <div class="filter-controls mb-3">
                     <input type="text" id="query-keyword" class="form-control d-inline-block w-auto"
                            placeholder="输入文件名关键字...">
                     <button id="query-btn" class="btn btn-primary ms-2">查询</button>
                 </div>
-
                 <div id="decrypted-table-container" class="table-container">
                     <table id="decrypted-files-table" class="table table-striped table-bordered table-hover text-xs">
                         <thead class="bg-gray-100 sticky top-0 z-10">
@@ -58,15 +58,14 @@
                         <tbody></tbody>
                     </table>
                 </div>
-
                 <div id="decrypted-pagination" class="pagination-container mt-3">
                     <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#query-download-section')}"></div>
                 </div>
             </div>
 
             <div id="sync-management-section" class="content-section">
+                <!-- 文档同步管理区域内容 (保持不变) -->
                 <h2 class="section-title">文档同步管理</h2>
-
                 <div class="sync-controls mb-3 d-flex justify-content-between align-items-center">
                     <div class="sync-status-info">
                         <span class="me-3">待同步文件: <strong id="pending-sync-count">0</strong></span>
@@ -82,7 +81,6 @@
                         <span>失败: <strong id="batch-delete-fail" class="text-danger">0</strong></span> |
                         <span>状态: <strong id="batch-delete-status">未开始</strong></span>
                     </div>
-
                     <div class="sync-buttons">
                         <button id="start-sync-btn" class="btn btn-success me-2">开始同步</button>
                         <button id="pause-resume-sync-btn" class="btn btn-warning me-2" disabled>暂停</button>
@@ -90,7 +88,6 @@
                         <button id="batch-clear-pending-btn" class="btn btn-info ms-2">清理本页待删除</button>
                     </div>
                 </div>
-
                 <div id="pending-table-container" class="table-container">
                     <table id="pending-files-table" class="table table-striped table-bordered table-hover text-xs">
                         <thead class="bg-gray-100 sticky top-0 z-10">
@@ -107,11 +104,83 @@
                         </tbody>
                     </table>
                 </div>
-
                 <div id="pending-pagination" class="pagination-container mt-3">
                     <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#sync-management-section')}"></div>
                 </div>
+            </div>
 
+            <!-- 新增：全文内容检索区域，添加 active-section 类 -->
+            <div id="fulltext-search-section" class="content-section active-section">
+                <h2 class="section-title">全文内容检索</h2>
+
+                <!-- 1. 查询输入区 -->
+                <div class="filter-controls mb-3"> <!-- 复用现有 filter-controls 样式或创建新样式 -->
+                    <div class="search-input-container">
+                        <input type="text" id="fulltext-query-keyword" class="form-control" placeholder="输入关键词搜索文件内容...">
+                        <i id="fulltext-clear-search-icon" class="fas fa-times-circle"></i>
+                    </div>
+                    <button id="fulltext-query-btn" class="btn btn-primary ms-2">搜索</button>
+                </div>
+
+                <!-- 2. 高级筛选区 -->
+                <div class="mb-3">
+                    <button id="fulltext-advanced-filters-toggle" class="btn btn-secondary btn-sm filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#fulltext-advanced-filters-container" aria-expanded="false" aria-controls="fulltext-advanced-filters-container">
+                        高级筛选 <i class="fas fa-chevron-down ms-1"></i>
+                    </button>
+                </div>
+                <div class="collapse" id="fulltext-advanced-filters-container">
+                    <div class="filter-group">
+                        <label for="fulltext-filter-file-type">文件类型:</label>
+                        <div id="fulltext-filter-file-type" class="checkbox-group">
+                            <!-- 文件类型复选框将由JS动态生成或在此处硬编码 -->
+                            <span class="checkbox-item"><input type="checkbox" id="ftype-docx" value="docx"> <label for="ftype-docx" class="ms-1">DOCX</label></span>
+                            <span class="checkbox-item"><input type="checkbox" id="ftype-pdf" value="pdf"> <label for="ftype-pdf" class="ms-1">PDF</label></span>
+                            <span class="checkbox-item"><input type="checkbox" id="ftype-txt" value="txt"> <label for="ftype-txt" class="ms-1">TXT</label></span>
+                            <!-- 更多类型 -->
+                        </div>
+                        <button type="button" id="fulltext-clear-file-type-filter" class="clear-filter-btn">清除</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>修改日期范围:</label>
+                        <div class="date-range-group">
+                            <div class="date-range-inputs d-flex">
+                                <input type="text" id="fulltext-filter-date-from" class="form-control form-control-sm me-2" placeholder="开始日期">
+                                <span class="align-self-center me-2">-</span>
+                                <input type="text" id="fulltext-filter-date-to" class="form-control form-control-sm" placeholder="结束日期">
+                            </div>
+                        </div>
+                        <button type="button" id="fulltext-clear-date-filter" class="clear-filter-btn">清除</button>
+                    </div>
+                    <!-- 如果需要“应用筛选”按钮 -->
+                    <!-- <button id="fulltext-apply-filters-btn" class="btn btn-info btn-sm mt-2">应用筛选</button> -->
+                </div>
+
+
+                <!-- 3. 结果统计与排序区 -->
+                <div class="d-flex justify-content-between align-items-center my-3">
+                    <span id="fulltext-results-count" class="text-muted"></span>
+                    <div>
+                        <label for="fulltext-sort-options" class="form-label me-2">排序方式:</label>
+                        <select id="fulltext-sort-options" class="form-select form-select-sm d-inline-block w-auto">
+                            <option value="relevance" selected>相关度</option>
+                            <option value="modifiedDate_desc">修改日期 (降序)</option>
+                            <option value="modifiedDate_asc">修改日期 (升序)</option>
+                            <option value="filename_asc">文件名 (A-Z)</option>
+                            <option value="filename_desc">文件名 (Z-A)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 4. 结果展示区 -->
+                <div id="fulltext-results-list" class="mb-3">
+                    <!-- 搜索结果将动态填充到这里 -->
+                    <!-- 示例： <div class="text-center text-muted p-4">请输入关键词开始搜索。</div> -->
+                </div>
+
+                <!-- 5. 分页区 -->
+                <div id="fulltext-pagination" class="pagination-container mt-3">
+                    <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#fulltext-search-section')}"></div>
+                </div>
             </div>
 
         </div>
@@ -123,6 +192,16 @@
 <script th:src="@{/js/filemanage/filemanage_ui.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_query.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_sync.js}"></script>
+
+<!-- 新增：全文搜索相关的JS文件 (按拆分后的顺序) -->
+<script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_config.js}"></script>
+<script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_dom.js}"></script>
+<script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_ui.js}"></script>
+<script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_service.js}"></script>
+<script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_events.js}"></script>
+<!-- pagination.js 应该在 commonScripts 中或之前已加载 -->
+<!-- flatpickr.js 应该在 commonScripts 中或之前已加载 -->
+
 <script th:src="@{/js/filemanage/filemanage_main.js}"></script>
 
 </body>

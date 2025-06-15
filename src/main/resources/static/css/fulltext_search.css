@@ -1,0 +1,177 @@
+/**
+ * 目录结构: src/main/resources/static/css/fulltext_search.css
+ * 文件名称: fulltext_search.css
+ * 开发时间: 2025-06-04 16:30:00 (Asia/Shanghai)
+ * 作者: Gemini
+ * 代码用途: 全文内容检索模块的专属样式。
+ */
+
+/* --- 查询输入框清除图标 --- */
+.search-input-container {
+    position: relative;
+    display: flex;
+    flex-grow: 1; /* 让输入框容器占据更多空间 */
+}
+
+#fulltext-query-keyword { /* ID选择器特定于全文搜索输入框 */
+    padding-right: 2.5rem; /* 为清除图标留出空间 */
+    flex-grow: 1;
+}
+
+#fulltext-clear-search-icon { /* ID选择器特定于全文搜索清除图标 */
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #9ca3af; /* 灰色图标 (Tailwind gray-400) */
+    display: none; /* 默认隐藏, JS控制显示 */
+    font-size: 0.9rem; /* 图标大小调整 */
+}
+
+#fulltext-clear-search-icon:hover {
+    color: #6b7280; /* 悬停时深一点的灰色 (Tailwind gray-500) */
+}
+
+/* --- 全文搜索结果项样式 --- */
+.fulltext-result-item {
+    background-color: #fff;
+    border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+    border-radius: 0.375rem; /* 6px (Tailwind rounded-md) */
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); /* Tailwind shadow-sm/shadow */
+}
+
+.fulltext-result-item .matched-paragraph mark {
+    background-color: #fef08a; /* Tailwind yellow-200 类似的黄色高亮 */
+    padding: 0.1em 0; /* 细微调整高亮背景的上下内边距 */
+    border-radius: 0.125rem; /* 2px */
+}
+
+.fulltext-result-item .source-filename-container {
+    font-weight: 600; /* Tailwind font-semibold */
+    margin-bottom: 0.5rem; /* Tailwind mb-2 */
+    display: flex;
+    align-items: center;
+}
+
+.fulltext-result-item .source-filename-container i { /* Font Awesome 图标 */
+    margin-right: 0.5rem; /* Tailwind mr-2 */
+    color: #4b5563; /* Tailwind gray-600 */
+}
+
+.fulltext-result-item .source-filename-link {
+    color: #2563eb; /* Tailwind blue-600 */
+    text-decoration: none;
+}
+
+.fulltext-result-item .source-filename-link:hover {
+    text-decoration: underline;
+}
+
+.fulltext-result-item .file-metadata-info {
+    font-size: 0.875rem; /* 14px (Tailwind text-sm) */
+    color: #6b7280; /* Tailwind gray-500 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem; /* 水平间距1rem，垂直间距0 (Tailwind gap-x-4) */
+}
+/* 为不支持 gap 属性的旧浏览器的回退样式 */
+.fulltext-result-item .file-metadata-info span {
+    margin-right: 1rem;
+}
+.fulltext-result-item .file-metadata-info span:last-child {
+    margin-right: 0;
+}
+
+
+/* --- 高级筛选区域样式 --- */
+#fulltext-advanced-filters-container { /* ID选择器特定于全文搜索的筛选容器 */
+    background-color: #f9fafb; /* Tailwind gray-50 */
+    border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+    border-radius: 0.375rem; /* Tailwind rounded-md */
+    padding: 1rem;
+    margin-bottom: 1.5rem; /* Tailwind mb-6 */
+}
+
+.filter-group { /* 通用筛选组样式，如果其他地方也用，可以移到更通用的CSS文件 */
+    margin-bottom: 1rem; /* Tailwind mb-4 */
+}
+
+.filter-group > label { /* 直接子标签的 label (例如 "文件类型:", "修改日期范围:") */
+    font-weight: 500; /* Tailwind font-medium */
+    /* margin-right: 0.5rem; */ /* 已改为 block，不需要右边距 */
+    display: block; /* 让标签独占一行 */
+    margin-bottom: 0.5rem; /* Tailwind mb-2 */
+    color: #374151; /* Tailwind gray-700 */
+}
+
+.filter-group .checkbox-group,
+.filter-group .date-range-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem; /* Tailwind gap-3, 选项之间的间距 */
+}
+
+.filter-group .checkbox-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem; /* Tailwind text-sm */
+    color: #4b5563; /* Tailwind gray-600 */
+}
+
+.filter-group .checkbox-item input[type="checkbox"] {
+    margin-right: 0.375rem; /* Tailwind mr-1.5 */
+    /* 可以添加 Tailwind form-checkbox 类如果项目引入了 Tailwind Forms */
+    /* 或者自定义样式 */
+    height: 1rem; /* 16px */
+    width: 1rem; /* 16px */
+    border-radius: 0.25rem; /* Tailwind rounded-sm */
+    border-color: #d1d5db; /* Tailwind gray-300 */
+}
+.filter-group .checkbox-item input[type="checkbox"]:focus {
+    /* ring-indigo-500 or similar focus style */
+}
+
+
+.filter-group .date-range-inputs input[type="text"] { /* 特定于日期范围内的输入框 */
+    height: 35px; /* 与设计文档中的其他输入框保持一致 */
+    border: 1px solid #d1d5db; /* Tailwind gray-300 */
+    border-radius: 0.375rem; /* Tailwind rounded-md */
+    padding: 0.5rem 0.75rem; /* Tailwind py-2 px-3 */
+    font-size: 0.875rem; /* Tailwind text-sm */
+    background-color: #fff;
+    /* width: auto; */ /* 允许 flatpickr 控制宽度或根据 flex 容器调整 */
+}
+.filter-group .date-range-inputs input[type="text"]::placeholder {
+    color: #9ca3af; /* Tailwind gray-400 */
+}
+
+
+.filter-group .clear-filter-btn {
+    font-size: 0.8rem; /* 稍小一点的字体 */
+    color: #0d6efd; /* Bootstrap 蓝色，或项目主题色 */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0; /* 微调内边距 */
+    margin-left: 0.5rem; /* 与筛选选项组的间距 */
+    text-decoration: none; /* 默认无下划线 */
+}
+
+.filter-group .clear-filter-btn:hover {
+    text-decoration: underline;
+    color: #0a58ca; /* 悬停时深一点的蓝色 */
+}
+
+/* 高级筛选切换按钮 (如果需要特定样式覆盖 project.css) */
+/* .filter-toggle-btn { */
+/* 例如: margin-bottom: 1rem; */
+/* } */
+
+/* 确保与 project.css 中的按钮样式协调 */
+/* 如果 #fulltext-query-btn 和 #fulltext-advanced-filters-toggle 的样式 */
+/* 与 project.css 中的 .btn 冲突或不一致，可以在这里覆盖或调整。 */
+/* 例如，确保它们继承 project.css 的按钮基础样式，然后只做微调。 */
+
