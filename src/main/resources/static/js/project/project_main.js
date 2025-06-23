@@ -171,15 +171,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 目前假设 populateSelect 填充的是静态的完整列表。
         }
 
-        if (searchBtn) {
-            console.log('Simulating search button click to refresh list with cleared filters.');
-            searchBtn.click();
+        // if (searchBtn) {
+        //     console.log('Simulating search button click to refresh list with cleared filters.');
+        //     searchBtn.click();
+        // } else {
+        //     console.error('Search button not found. Cannot refresh list after clearing filters.');
+        //     if (typeof ProjectListModule !== 'undefined' && typeof ProjectListModule.refresh === 'function') {
+        //         if (ProjectListModule.setCurrentFilters) {
+        //             ProjectListModule.setCurrentFilters({});
+        //         }
+        //         ProjectListModule.refresh();
+        //     }
+        // }
+        if (nameInput) {
+            // 手动触发项目名称输入框的 'input' 事件，
+            // 这将会被 project_list.js 中的监听器捕获，从而触发 handleSearch 函数
+            console.log('Dispatching input event to trigger automatic search refresh.');
+            nameInput.dispatchEvent(new Event('input', { bubbles: true }));
         } else {
-            console.error('Search button not found. Cannot refresh list after clearing filters.');
+            // 保留备用方案，以防万一
+            console.error('Search name input not found. Cannot programmatically trigger refresh.');
             if (typeof ProjectListModule !== 'undefined' && typeof ProjectListModule.refresh === 'function') {
-                if (ProjectListModule.setCurrentFilters) {
-                    ProjectListModule.setCurrentFilters({});
-                }
                 ProjectListModule.refresh();
             }
         }

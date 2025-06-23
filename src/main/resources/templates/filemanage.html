@@ -7,7 +7,6 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/project.css}">
     <link rel="stylesheet" th:href="@{/css/filemanage.css}">
-    <!-- 新增：引入全文搜索专属CSS -->
     <link rel="stylesheet" th:href="@{/css/fulltext_search.css}">
     <link rel="stylesheet" th:href="@{/css/flatpickr.min.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -21,22 +20,18 @@
         <div id="filemanage-sidebar" class="sidebar list-group">
             <nav>
                 <ul class="sub-nav">
-                    <!-- 添加 active 类到全文检索 -->
-                    <li><a href="#fulltext-search-section" class="list-group-item list-group-item-action active" data-section="fulltext-search-section">
+                    <li class="nav-item"><a href="#fulltext-search-section" class="list-group-item list-group-item-action active" data-section="fulltext-search-section">
                         <i class="fas fa-search-plus"></i> 全文内容检索 </a></li>
-                    <!-- 移除 active 类 -->
-                    <li><a href="#query-download-section" class="list-group-item list-group-item-action" data-section="query-download-section">
+                    <li class="nav-item"><a href="#query-download-section" class="list-group-item list-group-item-action" data-section="query-download-section">
                         <i class="fas fa-search"></i> 文档查询下载 </a></li>
-                    <li><a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
+                    <li class="nav-item"><a href="#sync-management-section" class="list-group-item list-group-item-action" data-section="sync-management-section">
                         <i class="fas fa-sync-alt"></i> 文档同步管理 </a></li>
-
                 </ul>
             </nav>
         </div>
 
         <div id="filemanage-content" class="main-content">
 
-            <!-- 移除 active-section 类 -->
             <div id="query-download-section" class="content-section">
                 <!-- 文档查询下载区域内容 (保持不变) -->
                 <div class="filter-controls mb-3">
@@ -109,12 +104,9 @@
                 </div>
             </div>
 
-            <!-- 新增：全文内容检索区域，添加 active-section 类 -->
             <div id="fulltext-search-section" class="content-section active-section">
                 <h2 class="section-title">全文内容检索</h2>
-
-                <!-- 1. 查询输入区 -->
-                <div class="filter-controls mb-3"> <!-- 复用现有 filter-controls 样式或创建新样式 -->
+                <div class="filter-controls mb-3">
                     <div class="search-input-container">
                         <input type="text" id="fulltext-query-keyword" class="form-control" placeholder="输入关键词搜索文件内容...">
                         <i id="fulltext-clear-search-icon" class="fas fa-times-circle"></i>
@@ -122,21 +114,14 @@
                     <button id="fulltext-query-btn" class="btn btn-primary ms-2">搜索</button>
                 </div>
 
-                <!-- 2. 高级筛选区 -->
-                <div class="mb-3">
-                    <button id="fulltext-advanced-filters-toggle" class="btn btn-secondary btn-sm filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#fulltext-advanced-filters-container" aria-expanded="false" aria-controls="fulltext-advanced-filters-container">
-                        高级筛选 <i class="fas fa-chevron-down ms-1"></i>
-                    </button>
-                </div>
-                <div class="collapse" id="fulltext-advanced-filters-container">
+                <!-- 关键修复：移除折叠按钮和相关包裹div，让筛选区域始终显示 -->
+                <div class="mb-3" id="fulltext-advanced-filters-container">
                     <div class="filter-group">
                         <label for="fulltext-filter-file-type">文件类型:</label>
                         <div id="fulltext-filter-file-type" class="checkbox-group">
-                            <!-- 文件类型复选框将由JS动态生成或在此处硬编码 -->
                             <span class="checkbox-item"><input type="checkbox" id="ftype-docx" value="docx"> <label for="ftype-docx" class="ms-1">DOCX</label></span>
                             <span class="checkbox-item"><input type="checkbox" id="ftype-pdf" value="pdf"> <label for="ftype-pdf" class="ms-1">PDF</label></span>
                             <span class="checkbox-item"><input type="checkbox" id="ftype-txt" value="txt"> <label for="ftype-txt" class="ms-1">TXT</label></span>
-                            <!-- 更多类型 -->
                         </div>
                         <button type="button" id="fulltext-clear-file-type-filter" class="clear-filter-btn">清除</button>
                     </div>
@@ -151,12 +136,8 @@
                         </div>
                         <button type="button" id="fulltext-clear-date-filter" class="clear-filter-btn">清除</button>
                     </div>
-                    <!-- 如果需要“应用筛选”按钮 -->
-                    <!-- <button id="fulltext-apply-filters-btn" class="btn btn-info btn-sm mt-2">应用筛选</button> -->
                 </div>
 
-
-                <!-- 3. 结果统计与排序区 -->
                 <div class="d-flex justify-content-between align-items-center my-3">
                     <span id="fulltext-results-count" class="text-muted"></span>
                     <div>
@@ -170,14 +151,8 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- 4. 结果展示区 -->
                 <div id="fulltext-results-list" class="mb-3">
-                    <!-- 搜索结果将动态填充到这里 -->
-                    <!-- 示例： <div class="text-center text-muted p-4">请输入关键词开始搜索。</div> -->
                 </div>
-
-                <!-- 5. 分页区 -->
                 <div id="fulltext-pagination" class="pagination-container mt-3">
                     <div th:replace="~{fragments/pagination :: pagination(currentPage=1, totalPages=1, baseUrl='/filemanage#fulltext-search-section')}"></div>
                 </div>
@@ -188,19 +163,19 @@
 </div>
 <div th:replace="~{fragments/scripts :: commonScripts}"></div>
 
+<!-- Bootstrap JS Bundle 仍然保留，以防项目其他地方（如公共的header）需要它 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script th:src="@{/js/filemanage/filemanage_api.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_ui.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_query.js}"></script>
 <script th:src="@{/js/filemanage/filemanage_sync.js}"></script>
 
-<!-- 新增：全文搜索相关的JS文件 (按拆分后的顺序) -->
 <script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_config.js}"></script>
 <script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_dom.js}"></script>
 <script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_ui.js}"></script>
 <script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_service.js}"></script>
 <script th:src="@{/js/filemanage/fulltext/filemanage_fulltext_events.js}"></script>
-<!-- pagination.js 应该在 commonScripts 中或之前已加载 -->
-<!-- flatpickr.js 应该在 commonScripts 中或之前已加载 -->
 
 <script th:src="@{/js/filemanage/filemanage_main.js}"></script>
 

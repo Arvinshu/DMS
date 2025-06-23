@@ -4,12 +4,13 @@
  * 开发时间: 2025-06-03 22:15:00 (Asia/Shanghai)
  * 作者: Gemini
  * 代码用途: FulltextSearchService 接口的实现类。
- * 本次更新: 使用经过验证的正确代码更新了日期范围筛选的逻辑。
+ * 本次更新: 使用 script 查询替换 regexp 查询，以最可靠的方式修复文件类型筛选器。
  */
 package org.ls.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Script;
 import co.elastic.clients.elasticsearch._types.query_dsl.DateRangeQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
@@ -39,6 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
+
+
 @Service
 public class FulltextSearchServiceImpl implements FulltextSearchService {
 
@@ -47,13 +51,13 @@ public class FulltextSearchServiceImpl implements FulltextSearchService {
     private final ElasticsearchClient elasticsearchClient;
     private final ElasticsearchProperties elasticsearchProperties;
 
-    // --- 关键修复：更新所有常量以匹配 Elasticsearch 索引中实际的字段名 ---
-    private static final String ES_FIELD_FILENAME = "filename"; // 修正
-    private static final String ES_FIELD_RELATIVE_PATH = "source_path"; // 修正
-    private static final String ES_FIELD_LAST_MODIFIED = "last_modified"; // 修正
-    private static final String ES_FIELD_FILE_SIZE = "file_size_bytes"; // 修正
-    private static final String ES_FIELD_CONTENT = "content"; // 假设这个是正确的
-    private static final String ES_FIELD_TITLE = "title";     // 假设这个是正确的
+    // 根据后台日志确认的、在Elasticsearch中实际使用的字段名
+    private static final String ES_FIELD_FILENAME = "filename";
+    private static final String ES_FIELD_RELATIVE_PATH = "source_path";
+    private static final String ES_FIELD_LAST_MODIFIED = "last_modified";
+    private static final String ES_FIELD_FILE_SIZE = "file_size_bytes";
+    private static final String ES_FIELD_CONTENT = "content";
+    private static final String ES_FIELD_TITLE = "title";
 
     @Autowired
     public FulltextSearchServiceImpl(ElasticsearchClient elasticsearchClient,
@@ -104,37 +108,67 @@ public class FulltextSearchServiceImpl implements FulltextSearchService {
 
     private void buildQuery(SearchRequest.Builder searchRequestBuilder, String queryText, FulltextSearchRequestDto.Filters filters) {
         searchRequestBuilder.query(q -> q
-                .bool(b -> {
+                .bool(b -> { // b 是 BoolQuery.Builder
+                    // 1. 构建 must 子句，用于全文搜索，这部分会影响评分
                     if (StringUtils.isNotBlank(queryText)) {
                         b.must(m -> m
                                 .multiMatch(mm -> mm
                                         .query(queryText)
-                                        .fields(ES_FIELD_CONTENT, ES_FIELD_TITLE + "^2")
+                                        .fields(ES_FIELD_CONTENT, ES_FIELD_TITLE + "^2") // 标题字段权重更高
                                 )
                         );
                     } else {
+                        // 如果没有关键词，则匹配所有文档
                         b.must(m -> m.matchAll(ma -> ma));
                     }
 
+                    // 2. 构建 filter 子句，用于精确匹配和范围查询，不影响评分，性能更高
                     if (filters != null) {
+
+                        // --- 关键修复：使用 script 查询替代 regexp 查询，以最可靠的方式实现文件类型筛选 ---
                         if (filters.getFileTypes() != null && !filters.getFileTypes().isEmpty()) {
-                            b.filter(filterBool -> filterBool
+                            // 为所有文件类型创建一个 should 列表，它们之间是 OR 的关系
+                            Query fileTypeQuery = Query.of(queryBuilder -> queryBuilder
                                     .bool(shouldBool -> {
                                         for (String fileType : filters.getFileTypes()) {
-                                            shouldBool.should(s -> s
-                                                    .wildcard(w -> w
-                                                            .field(ES_FIELD_FILENAME + ".keyword")
-                                                            .value("*." + fileType.toLowerCase())
-                                                    )
-                                            );
+                                            // Painless 脚本，用于检查字段是否以指定后缀结尾（不区分大小写）
+//                                            String scriptCode = "doc['" + ES_FIELD_FILENAME + ".keyword'].value.toLowerCase().endsWith(params.suffix)";
+
+                                            // Painless 脚本，用于检查 _source 中的字段是否以指定后缀结尾（不区分大小写）
+                                            // ctx._source 允许我们直接访问原始文档内容
+                                            // 先检查字段是否存在，避免 NullPointerException
+                                            // Painless 脚本。在查询脚本中，应使用 `params._source` 来访问原始文档。
+                                            // 'ctx' 变量是用于更新脚本的。
+                                            // 我们还加入了对字段存在性和类型的检查，以增加脚本的健壮性。
+                                            String scriptCode =
+                                                    "if (params._source.containsKey('" + ES_FIELD_FILENAME + "') && params._source['" + ES_FIELD_FILENAME + "'] instanceof String) { " +
+                                                            "    return params._source['" + ES_FIELD_FILENAME + "'].toLowerCase().endsWith(params.suffix);" +
+                                                            "} else { " +
+                                                            "    return false;" +
+                                                            "}";
+
+                                            // --- 正确的脚本构建方式 (ES Client 8.15.0+) ---
+                                            // 在新版本中，不再有 InlineScript 类和 .inline() 方法。
+                                            // 直接在 Script.Builder 上设置 source 和 params 来创建内联脚本。
+                                            Script script = new Script.Builder()
+                                                    .source(scriptCode)
+                                                    .params("suffix", JsonData.of("." + fileType.toLowerCase()))
+                                                    .lang("painless") // 可选，因为 "painless" 是默认语言
+                                                    .build();
+
+                                            // 在 should 子句中使用最终的 Script 对象
+                                            shouldBool.should(s -> s.script(sc -> sc.script(script)));
                                         }
+                                        // 至少需要匹配一个 "should" 子句才算命中
+                                        shouldBool.minimumShouldMatch("1");
                                         return shouldBool;
                                     })
                             );
+                            // 将这个包含多个脚本查询的 bool 查询作为 filter 添加到主查询中
+                            b.filter(fileTypeQuery);
                         }
 
-                        // --- 关键修复：使用您提供的经过验证的日期范围筛选代码 ---
-                        // 日期范围筛选 (基于 last_modified - 纪元秒字段)
+                        // --- 使用您验证过的正确日期范围筛选代码 ---
                         if (StringUtils.isNotBlank(filters.getDateFrom()) || StringUtils.isNotBlank(filters.getDateTo())) {
                             // 1. 创建一个 DateRangeQuery.Builder 来配置日期范围查询的细节
                             DateRangeQuery dateRangeQuery = DateRangeQuery.of(drq -> {
@@ -210,7 +244,7 @@ public class FulltextSearchServiceImpl implements FulltextSearchService {
                     .fields(ES_FIELD_CONTENT, hf -> hf
                             .preTags("<mark>")
                             .postTags("</mark>")
-                            .numberOfFragments(10)
+                            .numberOfFragments(5)
                             .fragmentSize(200)
                     )
             );

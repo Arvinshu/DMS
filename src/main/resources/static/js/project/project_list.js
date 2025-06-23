@@ -43,15 +43,19 @@ const ProjectListModule = (() => {
         searchProfitCenterSelect = document.getElementById(SEARCH_PROFIT_CENTER_ID);
         searchStageSelect = document.getElementById(SEARCH_STAGE_ID);
         searchStatusSelect = document.getElementById(SEARCH_STATUS_ID);
-        searchBtn = document.getElementById(SEARCH_BTN_ID);
+        // searchBtn = document.getElementById(SEARCH_BTN_ID);
 
-        if (!tableBody || !searchNameInput /* ... other checks ... */ || !searchBtn) {
+        // if (!tableBody || !searchNameInput /* ... other checks ... */ || !searchBtn) {
+        //     console.error('ProjectListModule: Required DOM elements not found.');
+        //     return;
+        // }
+        if (!tableBody || !searchNameInput || !searchTagsSelect || !searchBusinessTypeSelect || !searchProfitCenterSelect || !searchStageSelect || !searchStatusSelect) {
             console.error('ProjectListModule: Required DOM elements not found.');
             return;
         }
 
         // 绑定搜索事件
-        searchBtn.addEventListener('click', handleSearch);
+        // searchBtn.addEventListener('click', handleSearch);
         [searchNameInput, searchTagsSelect, searchBusinessTypeSelect, searchProfitCenterSelect, searchStageSelect, searchStatusSelect].forEach(element => {
             const eventType = (element.multiple || element.type === 'text' || element.type === 'search') ? 'input' : 'change';
             element.addEventListener(eventType, () => {
