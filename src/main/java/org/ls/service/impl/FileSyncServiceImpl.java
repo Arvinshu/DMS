@@ -562,6 +562,8 @@ public class FileSyncServiceImpl implements FileSyncService {
             }
 
             Path tempFilePath = tempDirectory.resolve(tempFilename);
+
+            /*复制文件核心代码*/
             Files.copy(sourceFilePath, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
             log.info("已复制源文件 {} 到临时文件 {}", sourceFilePath, tempFilePath);
 
